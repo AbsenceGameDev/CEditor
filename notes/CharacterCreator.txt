@@ -1,0 +1,10 @@
+Character generator:
+
+TODO:
+(DONE)    1. Write the base character creator/generator as an independent library that I can use in conjunction any editor/framework, preferrably as a single header library
+
+(TODO)    2. Decide on an open source framework to use to and implement and editor for the character creator/generator in said framework
+
+(BACKLOG) 3. If I have time, extend the character creator/generator library as suggested by the test instructions
+
+(BACKLOG) 4. If I have any time left over, implement it in with alternative frameworks or engines? 
