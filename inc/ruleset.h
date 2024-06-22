@@ -1,3 +1,4 @@
+#pragma once
 #ifndef RULESET_H
 #define RULESET_H
 
@@ -13,6 +14,25 @@ constexpr int ConModifiers[20] = {-3, -3, -3, -3, -2, -2, -1, -1, -1, 0, 0, 0, 0
 
 constexpr int NameSize = 52;
 using GenericName = char[NameSize];
+
+inline void PoorMansStringCopy(GenericName& __restrict Target, const GenericName& __restrict Src)
+{
+   // This is my own fault for insisting to not use any includes or dependencies in ruleset.h,
+   for (int Step = 0; Step < NameSize;)
+   {
+      Target[Step] = Src[Step];
+      if (Src[Step] == '\0') { break; }
+
+      Step++;
+   }
+}
+
+typedef char*(StrcpyFP)(char *dest, const char *src);
+
+inline void PassThroughStrCpy(StrcpyFP StrCpy, GenericName& __restrict Target, const GenericName& __restrict Src)
+{
+   StrCpy(&Target[0], &Src[0]);
+}
 
 
 /** @brief max */
@@ -43,7 +63,7 @@ constexpr int PLATONIC_SOLIDS[5] = {
 };
 
 // Park Miller linear congruential generator
-int LCGPM(int* State)
+inline int LCGPM(int* State)
 {
    constexpr int A = 48271;
    int Low = (*State & 0x7fff) * A; // max: 32,767 * 48,271 = 1,581,695,857 = 0x5e46c371
@@ -60,9 +80,9 @@ struct TDiceRoller
 {
    TDiceRoller(int OverrideStartState = DEFAULT_START_STATE) : State(OverrideStartState)
    {
-   };
+   }
 
-   void Roll(int& Results[TDiceCount])
+   void Roll(int* Results)
    {
       for (int Step = 0; Step < TDiceCount;)
       {
@@ -75,7 +95,7 @@ struct TDiceRoller
       int Result = 0;
 
       int Results[TDiceCount];
-      Roll(Results);
+      Roll(&Results[0]);
 
       for (int Step = 0; Step < TDiceCount;)
       {
@@ -188,52 +208,48 @@ namespace Character
    }
 };
 
-
+static int IncrementalCID = 0;
 struct CharacterClass
 {
-   CharacterClass(int ClassID, Character::Spec::StatType InPrimeStat, Platonic::Dice InHitDieShape, int Seed = DEFAULT_START_STATE)
-      : ID(ClassID), PrimeStat(InPrimeStat), HitDieShape(InHitDieShape), _HitDice(InHitDieShape, Seed)
-   {
-   };
+private:
+   CharacterClass(): Name{}, PrimeStat(), _HitDice(Platonic::Dice::E4D, -1) {}
 
 public:
+   CharacterClass(const CharacterClass& Other, int Seed = DEFAULT_START_STATE)
+      : PrimeStat(Other.PrimeStat), HitDieShape(Other.HitDieShape), _HitDice(Other.HitDieShape, Seed)
+   {
+      PoorMansStringCopy(Name, Other.Name);
+      NewID();
+   }
+   CharacterClass(const GenericName& InName, Character::Spec::StatType InPrimeStat, Platonic::Dice InHitDieShape, int Seed = DEFAULT_START_STATE)
+      : PrimeStat(InPrimeStat), HitDieShape(InHitDieShape), _HitDice(InHitDieShape, Seed)
+   {
+      PoorMansStringCopy(Name, InName);
+      NewID();
+   }
+   void NewID() { ID = IncrementalCID++ % MAX_ID; }
+public:
+   int GetID() const { return ID; }
+   
    /** @brief Class Name. */
    GenericName Name; // @todo
-   /** @brief Class ID. */
-   int ID = INVALID_INDEX;
    /** @brief Class's Prime Stat'. */
    Character::Spec::StatType PrimeStat;
    /** @brief Platonic solid (shape of die)*/
    Platonic::Dice HitDieShape = Platonic::Dice::E4D;
 
 private:
+   /** @brief Class ID. */
+   int ID = INVALID_INDEX;
    UHitDice _HitDice;
    friend struct DnDCharacter;
 };
 
-inline void PoorMansStringCopy(GenericName& __restrict Target, const GenericName& __restrict Src)
-{
-   // This is my own fault for insisting to not use any includes or dependencies in ruleset.h,
-   for (int Step = 0; Step < NameSize;)
-   {
-      Target[Step] = Src[Step];
-      if (Src[Step] == '\0') { break; }
-
-      Step++;
-   }
-}
-
-typedef char*(StrcpyFP)(char *dest, const char *src);
-
-inline void PassThroughStrCpy(StrcpyFP StrCpy, GenericName& __restrict Target, const GenericName& __restrict Src)
-{
-   StrCpy(&Target[0], &Src[0]);
-}
-
-static int IncrementalID = 0;
+static int IncrementalRID = 0;
 struct CharacterRace
 {
 private:
+   CharacterRace(): Name{}, AbilityName{} {};
    CharacterRace(const GenericName& InName, const GenericName& InRaceAbilityName )
    {
       PoorMansStringCopy(Name, InName);
@@ -248,8 +264,13 @@ private:
 
       NewID();
    }
-   void NewID() { ID = IncrementalID++ % MAX_ID; }
+   void NewID() { ID = IncrementalRID++ % MAX_ID; }
 public:
+
+   static CharacterRace ConstructOnStack() { return CharacterRace{};};
+   
+   /** @brief Gets a copy of the ID. */
+   int GetID() const { return ID; }
    
    /** @brief Race Name. */
    GenericName Name; // @todo
@@ -275,14 +296,21 @@ struct StatRollReturn
 };
 
 
+static int IncrementalID = 0;
 typedef struct DnDCharacter
 {
 private:
-   DnDCharacter(const CharacterRace& InitRace, int ClassID, Character::Spec::StatType ClassPrimaryStat, Platonic::Dice HitDieShape,
-                int Seed,
-                int StartingGoldFactor = 10)
-      : Race(InitRace), Class(CharacterClass{ClassID, ClassPrimaryStat, HitDieShape, Seed})
+   DnDCharacter(
+      const GenericName& InName,
+      const CharacterRace& InitRace,
+      const CharacterClass& InClass,
+      int Seed,
+      int StartingGoldFactor = 10)
+         : Race(InitRace), Class(InClass, Seed)
    {
+      PoorMansStringCopy(Name, InName);
+      NewID();
+      
       DRoller3d6 Roller(Seed);
 
       // Roll stats
@@ -290,7 +318,7 @@ private:
       for (; Step <= Character::Spec::StatType::Charisma;)
       {
          AbilityScores[Step] = RollStat(Roller, Step);
-         Step = Character::Spec::StatType{Step + 1};
+         Step = static_cast<Character::Spec::StatType>(Step + 1);
       }
 
       // Roll starting gold
@@ -298,6 +326,7 @@ private:
 
       Hitpoints = RecalculateHitPoints();
    }
+   void NewID() { ID = IncrementalRID++ % MAX_ID; }
 
 
    /** @brief Rolls a value for the requested stat and then modifies it based on the races minimum stat value for said stat and the races stat modifiers for said stat */
@@ -313,14 +342,16 @@ private:
    }
 
 public:
+   
+   int GetID() const { return ID; }
+   
    /** @brief Create a character base on the stack. Calls ctro which rolls all stats, rolls starting gold and lastly rolls our hitpoints */
-   static DnDCharacter ConstructOnStack(bool& RaceAndClassWasCompatible, const CharacterRace& InitRace, int ClassID,
-                                        Character::Spec::StatType ClassPrimaryStat, Platonic::Dice HitDieShape, int Seed)
+   static DnDCharacter ConstructOnStack(bool& RaceAndClassWasCompatible, const CharacterRace& InitRace, const CharacterClass& InitClass, int Seed)
    {
       RaceAndClassWasCompatible = false;
       for (int Step = 0; Step < MAX_ALLOWED_CLASSES;)
       {
-         if (InitRace.AllowedClassIDs[Step++] != ClassID)
+         if (InitRace.AllowedClassIDs[Step++] != InitClass.GetID())
          {
             continue;
          }
@@ -330,8 +361,8 @@ public:
       }
 
       return RaceAndClassWasCompatible
-                ? DnDCharacter{InitRace, ClassID, ClassPrimaryStat, HitDieShape, Seed}
-                : DnDCharacter{CharacterRace{}, -1, Character::Spec::StatType{}, Platonic::Dice{}, -1};
+                ? DnDCharacter{{}, InitRace, InitClass, Seed}
+                : DnDCharacter{{}, CharacterRace::ConstructOnStack(), CharacterClass{}, -1};
    }
 
    int RollHitDie()
@@ -360,14 +391,11 @@ public:
    /** @brief Character Name. */
    GenericName Name; // @todo
    
-   /** @brief Character ID, suggest to use hash. */
-   int CharacterID = 0;
-
    /** @brief Characted Race */
-   CharacterRace Race{};
+   CharacterRace Race = CharacterRace::ConstructOnStack();
 
    /** @brief Character Class, possible selections determined by the given race */
-   CharacterClass Class{INVALID_INDEX, Character::Spec::StatType::Intelligence, Platonic::Dice::E6D};
+   CharacterClass Class{{}, Character::Spec::StatType::Intelligence, Platonic::Dice::E6D};
 
    /** @brief Ability Scores */
    StatRollReturn AbilityScores[Character::Spec::SpecSize]{};
@@ -380,6 +408,10 @@ public:
 
    /** @brief Characters hitpoints */
    int Hitpoints = 0;
+
+private:
+   /** @brief Character ID, suggest to use hash. */
+   int ID = 0;
 } DnDCharacter_t;
 
 #endif // RULESET_H
