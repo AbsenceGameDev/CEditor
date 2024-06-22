@@ -212,12 +212,10 @@ static int IncrementalCID = 0;
 
 struct CharacterClass
 {
-private:
    CharacterClass(): Name{}, PrimeStat(), _HitDice(Platonic::Dice::E4D, -1)
    {
    }
-
-public:
+   
    CharacterClass(const CharacterClass& Other, int Seed = DEFAULT_START_STATE)
       : PrimeStat(Other.PrimeStat), HitDieShape(Other.HitDieShape), _HitDice(Other.HitDieShape, Seed)
    {
@@ -256,11 +254,9 @@ static int IncrementalRID = 0;
 
 struct CharacterRace
 {
-private:
-   CharacterRace(): Name{"Default\0"}, AbilityName{"Default\0"}
-   {
-   }
+   CharacterRace(): Name{"Default\0"}, AbilityName{"Default\0"} { }
 
+private:
    CharacterRace(const GenericName& InName, const GenericName& InRaceAbilityName)
    {
       PoorMansStringCopy(Name, InName);
@@ -313,6 +309,8 @@ static int IncrementalID = 0;
 
 typedef struct DnDCharacter
 {
+   DnDCharacter(){};
+   
 private:
    DnDCharacter(
       const GenericName& InName,

@@ -150,6 +150,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\inc\dataformat.h" />
+    <ClInclude Include="..\..\inc\editor_core.h" />
     <ClInclude Include="..\..\inc\jsonhelper.h" />
     <ClInclude Include="..\..\inc\ruleset.h" />
     <ClInclude Include="..\..\inc\ui.h" />
@@ -161,6 +162,7 @@
     <ClInclude Include="..\..\vendor\nlohmann\json\json.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\editor_core.cpp"/>
     <ClCompile Include="..\..\vendor\imgui\imgui.cpp" />
     <ClCompile Include="..\..\vendor\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\vendor\imgui\imgui_draw.cpp" />

@@ -8,6 +8,8 @@
 
 #include <iostream>
 
+#include "../inc/editor_core.h"
+
 
 #define PDDEBUG
 
@@ -228,6 +230,21 @@ int UIHandler::CallbackRaceName(ImGuiInputTextCallbackData* data)
    
    strcpy_s(UIHandler::EditableRace.Name, MinV(Data::Format::NameSize, data->BufSize) , data->Buf);
    return 0;
+}
+
+void UIHandler::SaveClass(bool SetOpen)
+{
+   EditorCore::CreateClass(UIHandler::EditableClass);
+}
+
+void UIHandler::SaveRace(bool SetOpen)
+{
+   EditorCore::CreateRace(UIHandler::EditableRace);
+}
+
+void UIHandler::SaveCharacter(bool SetOpen)
+{
+   EditorCore::CreateCharacter(UIHandler::EditableCharacter);
 }
 
 

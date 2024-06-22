@@ -35,6 +35,11 @@ public:
    // static void SaveRace(bool SetOpen);
    // static void SaveCharacter(bool SetOpen);
 
+   static void SaveClass(bool SetOpen);
+   static void SaveRace(bool SetOpen);
+   static void SaveCharacter(bool SetOpen);
+
+   
    static void SetClassEditorOpen(bool SetOpen)      { DrawClassEditor     = SetOpen; }
    static void SetRaceEditorOpen(bool SetOpen)       { DrawRaceEditor      = SetOpen; }
    static void SetCharacterEditorOpen(bool SetOpen)  { DrawCharacterEditor = SetOpen; }
@@ -240,29 +245,6 @@ namespace UI
             GridElement{agChaoticEvilLabel,    CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget}
          }
       };
-            
-      /*
-      static Template AlignmentTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
-         {
-            GridElement{agLawGoodLabel,        CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agLawNeutralLabel,     CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agLawEvilLabel,        CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-
-            GridElement{agNeutralGoodLabel,    CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agNeutralNeutralLabel, CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agNeutralEvilLabel,    CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            
-            GridElement{agChaoticGoodLabel,    CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agChaoticNeutralLabel, CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agChaoticEvilLabel,    CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget}
-         }
-      };
-       */
-
-      
-      
    }
 
 
@@ -279,7 +261,7 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{SaveClassLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{SaveClassLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, &UIHandler::SaveClass},
             GridElement{LoadClassLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
             GridElement{ CloseClassLabel, MenuStyle, INVALID_INDEX, &UIHandler::GetIsClassEditorOpen, &UIHandler::SetClassEditorOpen} 
          }
@@ -292,7 +274,7 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{SaveRaceLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{SaveRaceLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, &UIHandler::SaveRace},
             GridElement{LoadRaceLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
             GridElement{CloseRaceLabel, MenuStyle, INVALID_INDEX, &UIHandler::GetIsRaceEditorOpen, &UIHandler::SetRaceEditorOpen}
          }
@@ -306,7 +288,7 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{SaveCharacterLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{SaveCharacterLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, &UIHandler::SaveCharacter},
             GridElement{LoadCharacterLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
             GridElement{CloseCharacterLabel, MenuStyle, INVALID_INDEX, &UIHandler::GetIsCharacterEditorOpen, &UIHandler::SetCharacterEditorOpen}
          }
