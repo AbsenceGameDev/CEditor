@@ -27,7 +27,7 @@ inline void PoorMansStringCopy(GenericName& __restrict Target, const GenericName
    }
 }
 
-typedef char*(StrcpyFP)(char *dest, const char *src);
+typedef char*(StrcpyFP)(char* dest, const char* src);
 
 inline void PassThroughStrCpy(StrcpyFP StrCpy, GenericName& __restrict Target, const GenericName& __restrict Src)
 {
@@ -173,14 +173,14 @@ namespace Character
 {
    namespace Spec
    {
-   // @todo make use of this if I have time, Chaotic good, etc..
-   enum Alignment : unsigned char
-   {
-                     /* Lawful          Neutral            Chaotic */
-      /* Good    */     LawGood=0,      NeutralGood,       ChaosGood,
-      /* Neutral */     LawNeutral,     NeutralNeutral,    ChaosNeutral,
-      /* Evil    */     LawEvil,        NeutralEvil,       ChaosEvil
-   };
+      // @todo make use of this if I have time, Chaotic good, etc..
+      enum Alignment : unsigned char
+      {
+         /* Lawful          Neutral            Chaotic */
+         /* Good    */     LawGood=0,      NeutralGood,       ChaosGood,
+         /* Neutral */     LawNeutral,     NeutralNeutral,    ChaosNeutral,
+         /* Evil    */     LawEvil,        NeutralEvil,       ChaosEvil
+      };
    }
 };
 
@@ -188,31 +188,34 @@ namespace Character
 {
    namespace Spec
    {
-   enum StatType : unsigned char
-   {
-      Strength = 0,
-      Intelligence,
-      Wisdom,
-      Dexterity,
-      Constitution,
-      Charisma
-   };
+      enum StatType : unsigned char
+      {
+         Strength = 0,
+         Intelligence,
+         Wisdom,
+         Dexterity,
+         Constitution,
+         Charisma
+      };
 
-   struct StatConstruct
-   {
-      StatType Type = StatType::Charisma;
-      int Value = 0;
-   };
+      struct StatConstruct
+      {
+         StatType Type = StatType::Charisma;
+         int Value = 0;
+      };
 
-   constexpr int SpecSize = 6;
+      constexpr int SpecSize = 6;
    }
 };
 
 static int IncrementalCID = 0;
+
 struct CharacterClass
 {
 private:
-   CharacterClass(): Name{}, PrimeStat(), _HitDice(Platonic::Dice::E4D, -1) {}
+   CharacterClass(): Name{}, PrimeStat(), _HitDice(Platonic::Dice::E4D, -1)
+   {
+   }
 
 public:
    CharacterClass(const CharacterClass& Other, int Seed = DEFAULT_START_STATE)
@@ -221,16 +224,19 @@ public:
       PoorMansStringCopy(Name, Other.Name);
       NewID();
    }
+
    CharacterClass(const GenericName& InName, Character::Spec::StatType InPrimeStat, Platonic::Dice InHitDieShape, int Seed = DEFAULT_START_STATE)
       : PrimeStat(InPrimeStat), HitDieShape(InHitDieShape), _HitDice(InHitDieShape, Seed)
    {
       PoorMansStringCopy(Name, InName);
       NewID();
    }
+
    void NewID() { ID = IncrementalCID++ % MAX_ID; }
+
 public:
    int GetID() const { return ID; }
-   
+
    /** @brief Class Name. */
    GenericName Name; // @todo
    /** @brief Class's Prime Stat'. */
@@ -238,40 +244,47 @@ public:
    /** @brief Platonic solid (shape of die)*/
    Platonic::Dice HitDieShape = Platonic::Dice::E4D;
 
-private:
-   /** @brief Class ID. */
+   /** @brief Class ID.
+    * @note Needed to move it out of private so nlohmanns library can serialize it */
    int ID = INVALID_INDEX;
+private:
    UHitDice _HitDice;
    friend struct DnDCharacter;
 };
 
 static int IncrementalRID = 0;
+
 struct CharacterRace
 {
 private:
-   CharacterRace(): Name{}, AbilityName{} {};
-   CharacterRace(const GenericName& InName, const GenericName& InRaceAbilityName )
+   CharacterRace(): Name{"Default\0"}, AbilityName{"Default\0"}
+   {
+   }
+
+   CharacterRace(const GenericName& InName, const GenericName& InRaceAbilityName)
    {
       PoorMansStringCopy(Name, InName);
       PoorMansStringCopy(AbilityName, InRaceAbilityName);
 
       NewID();
    }
-   CharacterRace(StrcpyFP StrCpy, const GenericName& InName, const GenericName& InRaceAbilityName )
+
+   CharacterRace(StrcpyFP StrCpy, const GenericName& InName, const GenericName& InRaceAbilityName)
    {
       StrCpy(Name, InName);
       StrCpy(AbilityName, InRaceAbilityName);
 
       NewID();
    }
-   void NewID() { ID = IncrementalRID++ % MAX_ID; }
-public:
 
-   static CharacterRace ConstructOnStack() { return CharacterRace{};};
-   
+   void NewID() { ID = IncrementalRID++ % MAX_ID; }
+
+public:
+   static CharacterRace ConstructOnStack() { return CharacterRace{}; }
+
    /** @brief Gets a copy of the ID. */
    int GetID() const { return ID; }
-   
+
    /** @brief Race Name. */
    GenericName Name; // @todo
    /** @brief Minimum stats for race. */
@@ -284,8 +297,8 @@ public:
    /** @brief Granted classes for this race */
    int AllowedClassIDs[MAX_ALLOWED_CLASSES]{INVALID_INDEX};
 
-private:
-   /** @brief Race ID. */
+   /** @brief Race ID.
+    * @note Needed to move it out of private so nlohmanns library can serialize it */
    int ID = INVALID_INDEX;
 };
 
@@ -297,6 +310,7 @@ struct StatRollReturn
 
 
 static int IncrementalID = 0;
+
 typedef struct DnDCharacter
 {
 private:
@@ -306,11 +320,11 @@ private:
       const CharacterClass& InClass,
       int Seed,
       int StartingGoldFactor = 10)
-         : Race(InitRace), Class(InClass, Seed)
+      : Race(InitRace), Class(InClass, Seed)
    {
       PoorMansStringCopy(Name, InName);
       NewID();
-      
+
       DRoller3d6 Roller(Seed);
 
       // Roll stats
@@ -326,6 +340,7 @@ private:
 
       Hitpoints = RecalculateHitPoints();
    }
+
    void NewID() { ID = IncrementalRID++ % MAX_ID; }
 
 
@@ -339,14 +354,14 @@ private:
 
       Return.RollValue = Roller.RollAndAdd();
       Return.ModifiedValue = ClampData(Return.RollValue + StatMod, MinimumStat, 30);
+      return Return;
    }
 
 public:
-   
    int GetID() const { return ID; }
-   
+
    /** @brief Create a character base on the stack. Calls ctro which rolls all stats, rolls starting gold and lastly rolls our hitpoints */
-   static DnDCharacter ConstructOnStack(bool& RaceAndClassWasCompatible, const CharacterRace& InitRace, const CharacterClass& InitClass, int Seed)
+   static DnDCharacter ConstructOnStack(const GenericName& InName, bool& RaceAndClassWasCompatible, const CharacterRace& InitRace, const CharacterClass& InitClass, int Seed)
    {
       RaceAndClassWasCompatible = false;
       for (int Step = 0; Step < MAX_ALLOWED_CLASSES;)
@@ -361,8 +376,8 @@ public:
       }
 
       return RaceAndClassWasCompatible
-                ? DnDCharacter{{}, InitRace, InitClass, Seed}
-                : DnDCharacter{{}, CharacterRace::ConstructOnStack(), CharacterClass{}, -1};
+                ? DnDCharacter{{InName}, InitRace, InitClass, Seed}
+                : DnDCharacter{{InName}, CharacterRace::ConstructOnStack(), CharacterClass{}, -1};
    }
 
    int RollHitDie()
@@ -390,7 +405,7 @@ public:
 
    /** @brief Character Name. */
    GenericName Name; // @todo
-   
+
    /** @brief Characted Race */
    CharacterRace Race = CharacterRace::ConstructOnStack();
 
@@ -409,8 +424,8 @@ public:
    /** @brief Characters hitpoints */
    int Hitpoints = 0;
 
-private:
-   /** @brief Character ID, suggest to use hash. */
+   /** @brief Character ID, suggest to use hash but for now incremental static ID.
+    * @note Needed to move it out of private so nlohmanns library can serialize it */
    int ID = 0;
 } DnDCharacter_t;
 

@@ -9,12 +9,12 @@
 #include "../inc/ui.h"
 
 // Data
-static ID3D11Device*           g_pd3dDevice           = nullptr;
-static ID3D11DeviceContext*    g_pd3dDeviceContext    = nullptr;
-static IDXGISwapChain*         g_pSwapChain           = nullptr;
-static bool                    g_SwapChainOccluded    = false;
-static UINT                    g_ResizeWidth          = 0;
-static UINT                    g_ResizeHeight         = 0;
+static ID3D11Device* g_pd3dDevice = nullptr;
+static ID3D11DeviceContext* g_pd3dDeviceContext = nullptr;
+static IDXGISwapChain* g_pSwapChain = nullptr;
+static bool g_SwapChainOccluded = false;
+static UINT g_ResizeWidth = 0;
+static UINT g_ResizeHeight = 0;
 static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
 
 // Forward declarations of helper functions
@@ -41,7 +41,7 @@ void MainLoop(ImGuiIO& io)
       {
          ::TranslateMessage(&Msg);
          ::DispatchMessage(&Msg);
-         
+
          if (Msg.message == WM_QUIT) { IsDone = true; }
       }
       if (IsDone) { break; }
@@ -70,11 +70,13 @@ void MainLoop(ImGuiIO& io)
 
       //
       // Setting up windows before rendering pass
-      UIHandler::OnPaint(io,  ClearColor);
+      UIHandler::OnPaint(io, ClearColor);
 
       // Rendering
       ImGui::Render();
-      const float ClearColorWAlpha[4]={ClearColor.x * ClearColor.w, ClearColor.y * ClearColor.w, ClearColor.z * ClearColor.w, ClearColor.w};
+      const float ClearColorWAlpha[4] = {
+         ClearColor.x * ClearColor.w, ClearColor.y * ClearColor.w, ClearColor.z * ClearColor.w, ClearColor.w
+      };
       g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
       g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, ClearColorWAlpha);
       ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -95,7 +97,8 @@ int main(int, char**)
       sizeof(Wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr
    };
    ::RegisterClassExW(&Wc);
-   HWND Hwnd = ::CreateWindowW(Wc.lpszClassName, L"CEditor", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, Wc.hInstance, nullptr);
+   HWND Hwnd = ::CreateWindowW(Wc.lpszClassName, L"CEditor", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, Wc.hInstance,
+                               nullptr);
 
    // Initialize Direct3D
    if (!CreateDeviceD3D(Hwnd))
@@ -169,13 +172,14 @@ bool CreateDeviceD3D(HWND hWnd)
    D3D_FEATURE_LEVEL FeatureLevel;
    const D3D_FEATURE_LEVEL FeatureLevelArray[2] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0,};
    HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, CreateDeviceFlags, FeatureLevelArray, 2,
-                                               D3D11_SDK_VERSION, &SwapDescr, &g_pSwapChain, &g_pd3dDevice, &FeatureLevel, &g_pd3dDeviceContext);
+                                               D3D11_SDK_VERSION, &SwapDescr, &g_pSwapChain, &g_pd3dDevice, &FeatureLevel,
+                                               &g_pd3dDeviceContext);
    if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
    {
       res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, CreateDeviceFlags, FeatureLevelArray, 2,
-                                         D3D11_SDK_VERSION, &SwapDescr, &g_pSwapChain, &g_pd3dDevice, &FeatureLevel, &g_pd3dDeviceContext);
+                                          D3D11_SDK_VERSION, &SwapDescr, &g_pSwapChain, &g_pd3dDevice, &FeatureLevel, &g_pd3dDeviceContext);
    }
-   
+
    if (res != S_OK)
    {
       return false;
@@ -215,8 +219,8 @@ void CreateRenderTarget()
 
 void CleanupRenderTarget()
 {
-   if (g_mainRenderTargetView == nullptr) { return;}
-   
+   if (g_mainRenderTargetView == nullptr) { return; }
+
    g_mainRenderTargetView->Release();
    g_mainRenderTargetView = nullptr;
 }
@@ -238,7 +242,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
    {
    case WM_SIZE:
       if (wParam == SIZE_MINIMIZED) { return 0; }
-      
+
       g_ResizeWidth = static_cast<UINT>(LOWORD(lParam)); // Queue resize
       g_ResizeHeight = static_cast<UINT>(HIWORD(lParam));
       return 0;
@@ -250,7 +254,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
       ::PostQuitMessage(0);
       return 0;
 
-      default: break;
+   default: break;
    }
    return ::DefWindowProcW(hWnd, Msg, wParam, lParam);
 }
