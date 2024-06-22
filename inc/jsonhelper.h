@@ -25,7 +25,7 @@ namespace JHelper
       inline void SaveConfig(const CharacterClass& ClassDescr)
       {
          const nlohmann::json json = ClassDescr;
-         std::string ConfigsDir;
+         std::string ConfigsDir = "./../rsc/savedata/classes";
          std::ofstream outfilestream(ConfigsDir.append("/").append(ClassDescr.Name)); // This won't be portable but works for now
          outfilestream << std::setw(4) << json << '\n';
       }
@@ -44,7 +44,7 @@ namespace JHelper
       inline void SaveConfig(const CharacterRace& RaceDescr)
       {
          const nlohmann::json json = RaceDescr;
-         std::string ConfigsDir;
+         std::string ConfigsDir = "./../rsc/savedata/races";
          std::ofstream outfilestream(ConfigsDir.append("/").append(RaceDescr.Name)); // This won't be portable but works for now
          outfilestream << std::setw(4) << json << '\n';
       }
@@ -63,7 +63,7 @@ namespace JHelper
       inline void SaveConfig(const DnDCharacter& CharDescr)
       {
          const nlohmann::json json = CharDescr;
-         std::string ConfigsDir;
+         std::string ConfigsDir = "./../rsc/savedata/characters";
          std::ofstream outfilestream(ConfigsDir.append("/").append(CharDescr.Name)); // This won't be portable but works for now
          outfilestream << std::setw(4) << json << '\n';
       }

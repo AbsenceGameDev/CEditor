@@ -114,7 +114,6 @@ struct TDiceRoller
    int Count = TDiceCount;
    int SidesPerDie = TUniformSides;
 
-private:
    int State = DEFAULT_START_STATE;
 };
 
@@ -333,10 +332,9 @@ private:
          Step = static_cast<Character::Spec::StatType>(Step + 1);
       }
 
-      // Roll starting gold
-      Gold = Roller.RollAddAndMultiply(StartingGoldFactor); // 3d6 * StartingGoldFactor : defaults to 3d6 * 10
+      RollHPAndGold(StartingGoldFactor, Roller);
 
-      Hitpoints = RecalculateHitPoints();
+      CachedSeed = Roller.State;
    }
 
    void NewID() { ID = IncrementalRID++ % MAX_ID; }
@@ -401,6 +399,14 @@ public:
       return RollHitDie() + HitPointsModifier;
    }
 
+   void RollHPAndGold(int StartingGoldFactor, DRoller3d6 Roller)
+   {
+      // Roll starting gold
+      Gold = Roller.RollAddAndMultiply(StartingGoldFactor); // 3d6 * StartingGoldFactor : defaults to 3d6 * 10
+
+      Hitpoints = RecalculateHitPoints();
+   }   
+
    /** @brief Character Name. */
    GenericName Name; // @todo
 
@@ -425,6 +431,9 @@ public:
    /** @brief Character ID, suggest to use hash but for now incremental static ID.
     * @note Needed to move it out of private so nlohmanns library can serialize it */
    int ID = 0;
+
+
+   int CachedSeed = DEFAULT_START_STATE;
 } DnDCharacter_t;
 
 #endif // RULESET_H

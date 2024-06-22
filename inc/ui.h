@@ -81,12 +81,14 @@ struct GridElement
       const std::string& InLabel,
       ElementStyle InStyle,
       int InCurrentValue = 0,
+      bool InAllowNegativeValues = false,
       std::function<bool(void)> InStateDelegate = {},
       std::function<void(bool)> InCallbackTarget = {}
    )
       : Label(InLabel)
         , Style(InStyle)
         , IsSelected(false)
+        , AllowNegativeValues(InAllowNegativeValues)  
         , CurrentValue(InCurrentValue)
         , GetStateDelegate(InStateDelegate)
         , CallbackTarget(InCallbackTarget)
@@ -97,6 +99,7 @@ struct GridElement
    ElementStyle Style{};
    bool IsSelected = false;
    int CurrentValue = 0;
+   bool AllowNegativeValues = false;
 
    std::function<bool(void)> GetStateDelegate;
    std::function<void(bool)> CallbackTarget;
@@ -127,12 +130,12 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{StrLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{IntLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{WisLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{DexLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{ConLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{ChaLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{StrLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{IntLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{WisLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{DexLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{ConLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{ChaLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget}
          }
       };
 
@@ -145,11 +148,11 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{D4Label, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{D6Label, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{D8Label, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{D12Label, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{D20Label, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{D4Label, DefaultStyle, INVALID_INDEX,  false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{D6Label, DefaultStyle, INVALID_INDEX,  false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{D8Label, DefaultStyle, INVALID_INDEX,  false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{D12Label, DefaultStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{D20Label, DefaultStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget}
          }
       };
    }
@@ -168,12 +171,12 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{msStrLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msIntLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msWisLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msDexLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msConLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msChaLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{msStrLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{msIntLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{msWisLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{msDexLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{msConLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{msChaLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget}
          }
       };
 
@@ -187,23 +190,21 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{mfStrLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfIntLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfWisLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfDexLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfConLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfChaLabel, DefaultStyle, 0, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{mfStrLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{mfIntLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{mfWisLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{mfDexLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{mfConLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{mfChaLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget}
          }
       };      
    }
 
+   static constexpr ImVec2 CharacterEditorPadding = {20, 20};
+   static constexpr ImVec2 CharacterEditorSizes = {120, 40};
+   static constexpr ElementStyle CharacterEditorStyle = {CharacterEditorSizes, CharacterEditorPadding, ImTextureID{}};
    namespace Character
    {
-      static constexpr ImVec2 CharacterEditorPadding = {20, 20};
-      static constexpr ImVec2 CharacterEditorSizes = {120, 40};
-      static constexpr ElementStyle CharacterEditorStyle = {CharacterEditorSizes, CharacterEditorPadding, ImTextureID{}};
-
-      
       static const std::string agLawGoodLabel        = ("ag::Lawful Good");
       static const std::string agLawNeutralLabel     = ("ag::Lawful Neutral");
       static const std::string agLawEvilLabel        = ("ag::Lawful Evil");
@@ -220,9 +221,9 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{agLawGoodLabel,        CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agLawNeutralLabel,     CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agLawEvilLabel,        CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{agLawGoodLabel,        CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{agLawNeutralLabel,     CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{agLawEvilLabel,        CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget}
          }
       };
 
@@ -230,9 +231,9 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{agNeutralGoodLabel,    CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agNeutralNeutralLabel, CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agNeutralEvilLabel,    CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{agNeutralGoodLabel,    CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{agNeutralNeutralLabel, CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{agNeutralEvilLabel,    CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget}
          }
       };
 
@@ -240,9 +241,9 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{agChaoticGoodLabel,    CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agChaoticNeutralLabel, CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agChaoticEvilLabel,    CharacterEditorStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{agChaoticGoodLabel,    CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{agChaoticNeutralLabel, CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{agChaoticEvilLabel,    CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget}
          }
       };
    }
@@ -261,9 +262,9 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{SaveClassLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, &UIHandler::SaveClass},
-            GridElement{LoadClassLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{ CloseClassLabel, MenuStyle, INVALID_INDEX, &UIHandler::GetIsClassEditorOpen, &UIHandler::SetClassEditorOpen} 
+            GridElement{SaveClassLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, &UIHandler::SaveClass},
+            GridElement{LoadClassLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{ CloseClassLabel, MenuStyle, INVALID_INDEX, false, &UIHandler::GetIsClassEditorOpen, &UIHandler::SetClassEditorOpen} 
          }
       };
 
@@ -274,9 +275,9 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{SaveRaceLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, &UIHandler::SaveRace},
-            GridElement{LoadRaceLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{CloseRaceLabel, MenuStyle, INVALID_INDEX, &UIHandler::GetIsRaceEditorOpen, &UIHandler::SetRaceEditorOpen}
+            GridElement{SaveRaceLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, &UIHandler::SaveRace},
+            GridElement{LoadRaceLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{CloseRaceLabel, MenuStyle, INVALID_INDEX, false, &UIHandler::GetIsRaceEditorOpen, &UIHandler::SetRaceEditorOpen}
          }
       };
 
@@ -288,9 +289,9 @@ namespace UI
          INVALID_INDEX,
          INVALID_INDEX,
          {
-            GridElement{SaveCharacterLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, &UIHandler::SaveCharacter},
-            GridElement{LoadCharacterLabel, MenuStyle, INVALID_INDEX, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{CloseCharacterLabel, MenuStyle, INVALID_INDEX, &UIHandler::GetIsCharacterEditorOpen, &UIHandler::SetCharacterEditorOpen}
+            GridElement{SaveCharacterLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, &UIHandler::SaveCharacter},
+            GridElement{LoadCharacterLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{CloseCharacterLabel, MenuStyle, INVALID_INDEX, false, &UIHandler::GetIsCharacterEditorOpen, &UIHandler::SetCharacterEditorOpen}
          }
       };
    }

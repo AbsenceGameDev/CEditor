@@ -13,6 +13,15 @@
 
 #define PDDEBUG
 
+#define MakeTree(str_literal, scoped_payload) \
+ImGui::NewLine(); \
+if (ImGui::TreeNode(str_literal)) \
+{\
+\
+   scoped_payload \
+   ImGui::TreePop(); \
+}
+
 ImFont* UIHandler::GlobalFont = nullptr;
 bool UIHandler::DrawClassEditor = true;
 bool UIHandler::DrawRaceEditor = true;
@@ -57,14 +66,25 @@ void UIHandler::DrawAppMainMenuBar()
    ImGui::PopStyleVar();   
 }
 
+static void TooltipMarker(const char* desc)
+{
+   ImGui::TextDisabled("(?)");
+   if (ImGui::BeginItemTooltip())
+   {
+      ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+      ImGui::TextUnformatted(desc);
+      ImGui::PopTextWrapPos();
+      ImGui::EndTooltip();
+   }
+}
+
 // Editors OnPaint 
 void UIHandler::OnPaint(ImGuiIO& io, ImVec4 ClearColor)
 {
 #ifdef PDDEBUG
    ImGui::ShowIDStackToolWindow(); // @imgui debug tools
-
 #endif // PDDEBUG
-
+   
    // Main menu bar
    UIHandler::DrawAppMainMenuBar();
 
@@ -88,13 +108,8 @@ void UIHandler::OnPaint(ImGuiIO& io, ImVec4 ClearColor)
       const std::string ConcStr = "{Class Name}: " + NameToString;      
       ImGui::InputText(ConcStr.c_str(), classbuf, Data::Format::NameSize, SharedInputTextFlags, &UIHandler::CallbackClassName);
 
-      ImGui::NewLine();
-      ImGui::Text("{Prime Stat}");
-      DrawTemplates(&UI::Class::PrimeStatTemplates);
-
-      ImGui::NewLine();
-      ImGui::Text("{Hit-die}");
-      DrawTemplates(&UI::Class::PlatonicDiceTemplates);
+      MakeTree("{Prime Stat Selector}", { DrawTemplates(&UI::Class::PrimeStatTemplates); } )
+      MakeTree("{Hit-die Selector}", { DrawTemplates(&UI::Class::PlatonicDiceTemplates); } )
 
       //---- Class Menu buttons
       ImGui::NewLine();
@@ -122,22 +137,32 @@ void UIHandler::OnPaint(ImGuiIO& io, ImVec4 ClearColor)
       const std::string ConcStr = "{Race Name}: " + NameToString;      
       ImGui::InputText(ConcStr.c_str(), namebuf, Data::Format::NameSize, SharedInputTextFlags, &UIHandler::CallbackRaceName);
 
-      ImGui::NewLine();
-      ImGui::Text("{Minimum Stats}");
-      DrawTemplates(&UI::Race::MinimumStatsTemplates);
+      MakeTree("{Minimum Stats}", { DrawTemplates(&UI::Race::MinimumStatsTemplates); })
+      MakeTree("{Modifiers}", { DrawTemplates(&UI::Race::ModifierTemplates); })
+      
+      //
+      // Class selector tree
+      static const std::string ClassListPrefix = "cl::";
+      Template ClassTemplates{ INVALID_INDEX, INVALID_INDEX, {} };
+      MakeTree("{Allowed Classes Selector}",
+         {
+            for (const std::pair<const int, CharacterClass>& ClassPair : EditorCore::MappedClasses)
+            {
+               const std::string NameAsString = ClassListPrefix + ClassPair.second.Name;
+               ClassTemplates.Inner.emplace_back(NameAsString, UI::CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget);
+            }
+            DrawTemplates(&ClassTemplates);
+         }
+      )
 
-      ImGui::NewLine();
-      ImGui::Text("{Modifiers}");
-      DrawTemplates(&UI::Race::ModifierTemplates);
-
+      //
+      // Misc
       ImGui::NewLine();
       const std::string AbilityString = EditableRace.AbilityName;
       const std::string AbilityConcStr = "{Race Ability}: " + AbilityString;
-      ImGui::InputText(AbilityConcStr.c_str(), abilitybuf, Data::Format::NameSize);
-
-      ImGui::NewLine();
-      ImGui::Text("{@todo Class Selector, Array/List}");
-
+      ImGui::InputText(AbilityConcStr.c_str(), abilitybuf, Data::Format::NameSize);      
+      
+      
       //---- Race Menu buttons
       ImGui::NewLine();
       ImGui::NewLine();
@@ -151,51 +176,74 @@ void UIHandler::OnPaint(ImGuiIO& io, ImVec4 ClearColor)
    if (DrawCharacterEditor)
    {
       // @todo turn into some styling construct which handles pushing and popping full style overhauls for us? 
-      ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(500, 400));
-      static char charbuf[Data::Format::NameSize];
+      ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(600, 500));
       ImGui::Begin("CEditor Character Creator", 0, ImGuiWindowFlags_NoCollapse);
-
       
       const char* Input = "Character Base";
       ImGui::Text(Input);
-
-
-      // ImGuiIO& IODevice = ImGui::GetIO();
-      // ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_Enter);
       
+      static char charbuf[Data::Format::NameSize];
       const std::string NameToString = EditableCharacter.Name;
       const std::string ConcStr = "{Character Name}: " + NameToString;
       ImGui::InputText(ConcStr.c_str(), charbuf, Data::Format::NameSize, SharedInputTextFlags, &UIHandler::CallbackCharacterName);
-      // ImGui::IsItemDeactivatedAfterEdit();
       
-      // @todo Select class
-      ImGui::NewLine();
-      ImGui::Text("{@todo Selected and/or Rolled Class}");
+      // Class selector tree @todo Finish class selection
+      static const std::string ClassListPrefix = "cl::";
+      Template ClassTemplates{INVALID_INDEX, INVALID_INDEX, {} };
+      MakeTree("{Class Selector}", 
+         {
+            for (const std::pair<const int, CharacterClass>& ClassPair : EditorCore::MappedClasses)
+            {
+               const std::string NameAsString = ClassListPrefix + ClassPair.second.Name;
+               ClassTemplates.Inner.emplace_back(NameAsString, UI::CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget);
+            }
+            DrawTemplates(&ClassTemplates);
+         }
+      )
       
-      // @todo Select race
-      ImGui::NewLine();
-      ImGui::Text("{@todo Selected and/or Rolled Race}");
-
-      // @todo Display alignment
-      ImGui::NewLine();
-      ImGui::Text("{Alignment}");
-      ImGui::Text("{@todo Selected or rolled Alignment}");
-      DrawTemplates(&UI::Character::LawfulAlignmentTemplates);
-      ImGui::NewLine();
-      DrawTemplates(&UI::Character::NeutralAlignmentTemplates);
-      ImGui::NewLine();
-      DrawTemplates(&UI::Character::ChaoticAlignmentTemplates);
-
+      //
+      // Race selector tree @todo Finish race selection
+      static const std::string RaceListPrefix = "rs::";
+      Template RaceTemplates{ INVALID_INDEX, INVALID_INDEX,{}};
+      MakeTree("{Race Selector} : @todo Selected and/or Rolled Race",
+         {
+            for (const std::pair<const int, CharacterRace>& RacePair : EditorCore::MappedRaces)
+            {
+               const std::string NameAsString = RaceListPrefix + RacePair.second.Name;
+               RaceTemplates.Inner.emplace_back(NameAsString, UI::CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget);
+            }
+            DrawTemplates(&RaceTemplates);
+         }
+      )
       
-      // @todo Display calculated hitpoints
+      // Alignment selector tree @todo Finish Alignment selection, make sure we can't slect from teh different aligment templates, or put them all in one template and wrap by 3 element
+      MakeTree("{Alignment Selector - @todo Selected or rolled}",
+         {
+            DrawTemplates(&UI::Character::LawfulAlignmentTemplates);
+            ImGui::NewLine();
+            DrawTemplates(&UI::Character::NeutralAlignmentTemplates);
+            ImGui::NewLine();
+            DrawTemplates(&UI::Character::ChaoticAlignmentTemplates);
+         }
+      )
+      
+      
+      // @todo Display calculated hitpoints, have a roll button that rolls our abilities and our hitpoint
       ImGui::NewLine();
-      ImGui::Text("{@todo Calculated Hitpoints}");
+      ImGui::Text("{Hitpoints}");
+      ImGui::Text(": %04i", EditableCharacter.Hitpoints);
 
       // @todo Display calculated starter gold
       ImGui::NewLine();
-      ImGui::Text("{@todo Calculated Starter Gold}");
+      ImGui::Text("{Starting Gold}");
+      ImGui::Text(": %04i", EditableCharacter.Gold);
 
-
+      ImGui::NewLine();
+      if (ImGui::Button("{Roll Character Die}"))
+      {
+         EditableCharacter.RollHPAndGold(10, EditableCharacter.CachedSeed);
+      }
+      
       //---- Character Menu buttons
       ImGui::NewLine();
       ImGui::NewLine();
@@ -316,6 +364,14 @@ void UIHandler::DrawTemplates(Template* Category)
          Element.CallbackTarget(Element.GetStateDelegate() == false); //Flip state
       }
 
+      // Check if mouse button is still active and if this is an element wiht a visible value, ignore those with INVALID_INDEX, they are not meant to have values
+      if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left) && (Element.AllowNegativeValues || Element.CurrentValue != INVALID_INDEX))
+      {
+         const float YAcc = -ImGui::GetIO().MouseDelta.y / 2;
+         Element.CurrentValue = ClampData(Element.CurrentValue + static_cast<int>(YAcc), Element.AllowNegativeValues ? -20 : 0, 20);
+      }
+      
+
       if (OutHovered)
       {
          const bool SelectNewItem = DidPressButton && Category->LastSelectedElement != Category->CurrentSelectedElement;
@@ -337,7 +393,7 @@ void UIHandler::DrawTemplates(Template* Category)
       ImGui::SetCursorPosY(Y + Origin.y + SizeY);
       ImGui::PushFont(GlobalFont);
 
-      if (Element.CurrentValue >= 0)
+      if (Element.AllowNegativeValues || Element.CurrentValue >= 0)
       {
          ImGui::Text("%02d", Element.CurrentValue);
       }
