@@ -167,10 +167,9 @@ union UHitDice
 
 //
 // Character definitions
-
-namespace Character
+namespace Spec
 {
-   namespace Spec
+   namespace Character
    {
       // @todo make use of this if I have time, Chaotic good, etc..
       enum Alignment : unsigned char
@@ -180,13 +179,7 @@ namespace Character
          /* Neutral */     LawNeutral,     NeutralNeutral,    ChaosNeutral,
          /* Evil    */     LawEvil,        NeutralEvil,       ChaosEvil
       };
-   }
-};
 
-namespace Character
-{
-   namespace Spec
-   {
       enum StatType : unsigned char
       {
          Strength = 0,
@@ -207,6 +200,7 @@ namespace Character
    }
 };
 
+
 static int IncrementalCID = 0;
 
 struct CharacterClass
@@ -222,7 +216,7 @@ struct CharacterClass
       NewID();
    }
 
-   CharacterClass(const GenericName& InName, Character::Spec::StatType InPrimeStat, Platonic::Dice InHitDieShape, int Seed = DEFAULT_START_STATE)
+   CharacterClass(const GenericName& InName, Spec::Character::StatType InPrimeStat, Platonic::Dice InHitDieShape, int Seed = DEFAULT_START_STATE)
       : PrimeStat(InPrimeStat), HitDieShape(InHitDieShape), _HitDice(InHitDieShape, Seed)
    {
       PoorMansStringCopy(Name, InName);
@@ -237,7 +231,7 @@ public:
    /** @brief Class Name. */
    GenericName Name; // @todo
    /** @brief Class's Prime Stat'. */
-   Character::Spec::StatType PrimeStat;
+   Spec::Character::StatType PrimeStat;
    /** @brief Platonic solid (shape of die)*/
    Platonic::Dice HitDieShape = Platonic::Dice::E4D;
 
@@ -272,9 +266,9 @@ private:
       NewID();
    }
 
+public:
    void NewID() { ID = IncrementalRID++ % MAX_ID; }
 
-public:
    static CharacterRace ConstructOnStack() { return CharacterRace{}; }
 
    /** @brief Gets a copy of the ID. */
@@ -283,9 +277,9 @@ public:
    /** @brief Race Name. */
    GenericName Name; // @todo
    /** @brief Minimum stats for race. */
-   int MinimumStats[Character::Spec::SpecSize]{};
+   int MinimumStats[Spec::Character::SpecSize]{};
    /** @brief Stat modifiers for race. */
-   int Modifiers[Character::Spec::SpecSize]{};
+   int Modifiers[Spec::Character::SpecSize]{};
 
    /** @brief Race ability Name. */
    GenericName AbilityName; // @todo
@@ -325,11 +319,11 @@ private:
       DRoller3d6 Roller(Seed);
 
       // Roll stats
-      Character::Spec::StatType Step = Character::Spec::StatType::Strength;
-      for (; Step <= Character::Spec::StatType::Charisma;)
+      Spec::Character::StatType Step = Spec::Character::StatType::Strength;
+      for (; Step <= Spec::Character::StatType::Charisma;)
       {
          AbilityScores[Step] = RollStat(Roller, Step);
-         Step = static_cast<Character::Spec::StatType>(Step + 1);
+         Step = static_cast<Spec::Character::StatType>(Step + 1);
       }
 
       RollHPAndGold(StartingGoldFactor, Roller);
@@ -337,11 +331,10 @@ private:
       CachedSeed = Roller.State;
    }
 
-   void NewID() { ID = IncrementalRID++ % MAX_ID; }
 
 
    /** @brief Rolls a value for the requested stat and then modifies it based on the races minimum stat value for said stat and the races stat modifiers for said stat */
-   StatRollReturn RollStat(DRoller3d6& Roller, Character::Spec::StatType SelectedStat)
+   StatRollReturn RollStat(DRoller3d6& Roller, Spec::Character::StatType SelectedStat)
    {
       const int MinimumStat = Race.MinimumStats[SelectedStat];
       const int StatMod = Race.Modifiers[SelectedStat];
@@ -354,6 +347,7 @@ private:
    }
 
 public:
+   void NewID() { ID = IncrementalRID++ % MAX_ID; }
    int GetID() const { return ID; }
 
    /** @brief Create a character base on the stack. Calls ctro which rolls all stats, rolls starting gold and lastly rolls our hitpoints */
@@ -392,8 +386,8 @@ public:
    /** @brief  Recalculates the hitpoints */
    int RecalculateHitPoints()
    {
-      const int RaceModifierConstitution = Race.Modifiers[Character::Spec::StatType::Constitution];
-      const int FinalConstitution = AbilityScores[Character::Spec::StatType::Constitution].RollValue + RaceModifierConstitution;
+      const int RaceModifierConstitution = Race.Modifiers[Spec::Character::StatType::Constitution];
+      const int FinalConstitution = AbilityScores[Spec::Character::StatType::Constitution].RollValue + RaceModifierConstitution;
 
       int HitPointsModifier = ConModifiers[FinalConstitution];
       return RollHitDie() + HitPointsModifier;
@@ -414,13 +408,13 @@ public:
    CharacterRace Race = CharacterRace::ConstructOnStack();
 
    /** @brief Character Class, possible selections determined by the given race */
-   CharacterClass Class{{}, Character::Spec::StatType::Intelligence, Platonic::Dice::E6D};
+   CharacterClass Class{{}, Spec::Character::StatType::Intelligence, Platonic::Dice::E6D};
 
    /** @brief Ability Scores */
-   StatRollReturn AbilityScores[Character::Spec::SpecSize]{};
+   StatRollReturn AbilityScores[Spec::Character::SpecSize]{};
 
    /** @brief Has no bearing to anything as of yet */
-   Character::Spec::Alignment Alignment = Character::Spec::Alignment::ChaosGood;
+   Spec::Character::Alignment Alignment = Spec::Character::Alignment::ChaosGood;
 
    /** @brief Characters gold */
    int Gold = 0;

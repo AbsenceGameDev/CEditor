@@ -129,7 +129,7 @@ int main(int, char**)
    ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
    // Load Fonts
-   UIHandler::GlobalFont = UIHandler::LoadFonts(IODevice);
+   UIHandler::GlobalSmallFont = UIHandler::LoadFonts(IODevice);
 
    // Run main loop
    MainLoop(IODevice);

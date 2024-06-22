@@ -21,8 +21,8 @@ public:
    static void DeleteClass(int ClassID);
    static void DeleteRace(int RaceID);   
 
-   static std::map<int, DnDCharacter> MappedCharacters;
-   static std::map<int, CharacterRace> MappedRaces;
+   static std::map<int, DnDCharacter>   MappedCharacters;
+   static std::map<int, CharacterRace>  MappedRaces;
    static std::map<int, CharacterClass> MappedClasses;
 };
 

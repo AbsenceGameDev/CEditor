@@ -5,14 +5,17 @@
 #include "imgui.h"
 #include <d3d11.h>
 #include <functional>
+#include <map>
 #include <vector>
 
 #include "../inc/dataformat.h"
+#include "../inc/ruleset.h"
 
-auto DummyStateDelegate = [](void) -> bool { return false; };
-auto DummyCallbackTarget = [](bool) -> void
-{
-};
+auto DummyStateDelegate = [](const struct GridElement&) -> bool { return false; };
+auto DummyCallbackTarget = [](const struct GridElement&, bool) -> void { };
+
+using TemplateElementKeyIt = std::_Tree_iterator<std::_Tree_val<std::_Tree_simple_types<std::pair<struct Template* const, struct GridElement*>>>>&&;
+using TemplateElementValueIt  = std::_Tree_iterator<std::_Tree_val<std::_Tree_simple_types<std::pair<struct GridElement* const,  struct Template*>>>>&&;
 
 // fwd decl.
 struct Template;
@@ -21,6 +24,7 @@ class UIHandler
 {
 public:
    static void DrawAppMainMenuBar();
+   static void ProcessGridElement(Template* Category, GridElement& Element);
    static void DrawTemplates(Template* Category);
    static void OnPaint(ImGuiIO& io, ImVec4 ClearColor);
 
@@ -35,30 +39,63 @@ public:
    // static void SaveRace(bool SetOpen);
    // static void SaveCharacter(bool SetOpen);
 
-   static void SaveClass(bool SetOpen);
-   static void SaveRace(bool SetOpen);
-   static void SaveCharacter(bool SetOpen);
+   static void SaveClass(GridElement& CallingViualElement, bool SetOpen);
+   static void SaveRace(GridElement& CallingViualElement, bool SetOpen);
+   static void SaveCharacter(GridElement& CallingViualElement, bool SetOpen);
+
+   typedef struct Callbacks
+   {
+      static bool SelectInclusive(GridElement& CallingVisualElement);
+      static void SelectExclusive(GridElement& CallingVisualElement);
+      typedef struct Class
+      {
+         static void SelectPrimeStat(GridElement& CallingVisualElement, bool Select);
+         static void SelectHitDie(GridElement& CallingVisualElement, bool Select);
+      }class_t;
+
+      typedef struct Race
+      {
+         static void SelectMinimumStat(GridElement& CallingVisualElement, bool Select);
+         static void SelectModifier(GridElement& CallingVisualElement, bool Select);
+         static void SelectAllowedClass(GridElement& CallingVisualElement, bool Select);
+      }race_t;
+
+      typedef struct Character
+      {
+         static void SelectAlignment(GridElement& CallingVisualElement, bool Select);
+      }character_t;   
+   }callbacks_t;
 
    
-   static void SetClassEditorOpen(bool SetOpen)      { DrawClassEditor     = SetOpen; }
-   static void SetRaceEditorOpen(bool SetOpen)       { DrawRaceEditor      = SetOpen; }
-   static void SetCharacterEditorOpen(bool SetOpen)  { DrawCharacterEditor = SetOpen; }
-   static bool GetIsClassEditorOpen()                { return DrawClassEditor; }
-   static bool GetIsRaceEditorOpen()                 { return DrawRaceEditor; }
-   static bool GetIsCharacterEditorOpen()            { return DrawCharacterEditor; }
+   
+   
+   static void SetClassEditorOpen(GridElement&       CallingViualElement, bool SetOpen) { DrawClassEditor     = SetOpen; }
+   static void SetRaceEditorOpen(GridElement&        CallingViualElement, bool SetOpen) { DrawRaceEditor      = SetOpen; }
+   static void SetCharacterEditorOpen(GridElement&   CallingViualElement, bool SetOpen) { DrawCharacterEditor = SetOpen; }
+   static bool GetIsClassEditorOpen(GridElement&     CallingViualElement) { return DrawClassEditor; }
+   static bool GetIsRaceEditorOpen(GridElement&      CallingViualElement) { return DrawRaceEditor; }
+   static bool GetIsCharacterEditorOpen(GridElement& CallingViualElement) { return DrawCharacterEditor; }
 
 
    // 
    // Utility
    static ImFont* LoadFonts(ImGuiIO& io);
 
+   static std::map<Template*, GridElement*> LastSelectedElementPerTemplate;
+   static std::map<GridElement*, Template*> LastSelectedElementPerTemplate_BackMapping;
+   static std::map<Template*, GridElement*> CurrentSelectedElementPerTemplate;
+   static std::map<GridElement*, Template*> CurrentSelectedElementPerTemplate_BackMapping;
    
-   
-   static ImFont* GlobalFont;
+   static ImFont* GlobalSmallFont;
+   static ImFont* GlobalLargeFont;
    static bool DrawClassEditor;
    static bool DrawRaceEditor;
    static bool DrawCharacterEditor;
 
+   static std::string LastEditedClassName;
+   static std::string LastEditedRaceName;
+   static std::string LastEditedCharacterName;
+   
    static CharacterClass EditableClass;
    static CharacterRace  EditableRace;
    static DnDCharacter   EditableCharacter;
@@ -81,35 +118,43 @@ struct GridElement
       const std::string& InLabel,
       ElementStyle InStyle,
       int InCurrentValue = 0,
+      int InEnumSelectorValue = 0,
       bool InAllowNegativeValues = false,
-      std::function<bool(void)> InStateDelegate = {},
-      std::function<void(bool)> InCallbackTarget = {}
+      bool InAllowSelection      = true,
+      bool InDisplayValue        = true, 
+      std::function<bool(GridElement&)> InStateDelegate = {},
+      std::function<void(GridElement&, bool)> InCallbackTarget = {}
    )
       : Label(InLabel)
         , Style(InStyle)
         , IsSelected(false)
-        , AllowNegativeValues(InAllowNegativeValues)  
         , CurrentValue(InCurrentValue)
+        , EnumSelectorValue(InEnumSelectorValue)
+        , AllowNegativeValues(InAllowNegativeValues)
+        , AllowSelection(InAllowSelection)
+        , DisplayValue(InDisplayValue)
         , GetStateDelegate(InStateDelegate)
         , CallbackTarget(InCallbackTarget)
    {
    }
 
-   std::string Label{"Test"};
-   ElementStyle Style{};
-   bool IsSelected = false;
-   int CurrentValue = 0;
-   bool AllowNegativeValues = false;
+   std::string Label{"DefaultLabel"};
+   ElementStyle Style               = {};
+   bool         IsSelected          = false;
+   int          CurrentValue        = 0;
+   int          EnumSelectorValue   = 0;
+   bool         AllowNegativeValues = false;
+   bool         AllowSelection      = true;
+   bool         DisplayValue        = true;
 
-   std::function<bool(void)> GetStateDelegate;
-   std::function<void(bool)> CallbackTarget;
+   std::function<bool(GridElement&)> GetStateDelegate;
+   std::function<void(GridElement&, bool)> CallbackTarget;
 };
 
 typedef struct Template
 {
-   int LastSelectedElement = -1;
-   int CurrentSelectedElement = -1;
    std::vector<GridElement> Inner;
+   
 } Template_t;
 
 namespace UI
@@ -127,15 +172,13 @@ namespace UI
       static const std::string ConLabel = ("ps::CON");
       static const std::string ChaLabel = ("ps::CHA");
       static Template PrimeStatTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{StrLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{IntLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{WisLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{DexLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{ConLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{ChaLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{StrLabel, DefaultStyle, INVALID_INDEX, Spec::Character::StatType::Strength, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectPrimeStat},
+            GridElement{IntLabel, DefaultStyle, INVALID_INDEX, Spec::Character::StatType::Intelligence, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectPrimeStat},
+            GridElement{WisLabel, DefaultStyle, INVALID_INDEX, Spec::Character::StatType::Wisdom, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectPrimeStat},
+            GridElement{DexLabel, DefaultStyle, INVALID_INDEX, Spec::Character::StatType::Dexterity, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectPrimeStat},
+            GridElement{ConLabel, DefaultStyle, INVALID_INDEX, Spec::Character::StatType::Constitution, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectPrimeStat},
+            GridElement{ChaLabel, DefaultStyle, INVALID_INDEX, Spec::Character::StatType::Charisma, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectPrimeStat}
          }
       };
 
@@ -145,14 +188,12 @@ namespace UI
       static const std::string D12Label = ("ps::1d12");
       static const std::string D20Label = ("ps::1d20");
       static Template PlatonicDiceTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{D4Label, DefaultStyle, INVALID_INDEX,  false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{D6Label, DefaultStyle, INVALID_INDEX,  false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{D8Label, DefaultStyle, INVALID_INDEX,  false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{D12Label, DefaultStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{D20Label, DefaultStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{D4Label, DefaultStyle, INVALID_INDEX, Platonic::Dice::E4D,  false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectHitDie},
+            GridElement{D6Label, DefaultStyle, INVALID_INDEX, Platonic::Dice::E6D,  false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectHitDie},
+            GridElement{D8Label, DefaultStyle, INVALID_INDEX, Platonic::Dice::E8D,  false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectHitDie},
+            GridElement{D12Label, DefaultStyle, INVALID_INDEX, Platonic::Dice::E12D, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectHitDie},
+            GridElement{D20Label, DefaultStyle, INVALID_INDEX,  Platonic::Dice::E20D, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Class::SelectHitDie}
          }
       };
    }
@@ -168,15 +209,13 @@ namespace UI
       static const std::string msChaLabel = ("ms::CHA");
 
       static Template MinimumStatsTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{msStrLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msIntLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msWisLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msDexLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msConLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{msChaLabel, DefaultStyle, 0, false, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{msStrLabel, DefaultStyle, 0, Spec::Character::StatType::Strength, false, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectMinimumStat},
+            GridElement{msIntLabel, DefaultStyle, 0, Spec::Character::StatType::Intelligence, false, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectMinimumStat},
+            GridElement{msWisLabel, DefaultStyle, 0, Spec::Character::StatType::Wisdom, false, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectMinimumStat},
+            GridElement{msDexLabel, DefaultStyle, 0, Spec::Character::StatType::Dexterity, false, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectMinimumStat},
+            GridElement{msConLabel, DefaultStyle, 0, Spec::Character::StatType::Constitution, false, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectMinimumStat},
+            GridElement{msChaLabel, DefaultStyle, 0, Spec::Character::StatType::Charisma, false, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectMinimumStat}
          }
       };
 
@@ -187,15 +226,13 @@ namespace UI
       static const std::string mfConLabel = ("mf::CON");
       static const std::string mfChaLabel = ("mf::CHA");      
       static Template ModifierTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{mfStrLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfIntLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfWisLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfDexLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfConLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{mfChaLabel, DefaultStyle, 0, true, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{mfStrLabel, DefaultStyle, 0, Spec::Character::StatType::Strength, true, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectModifier},
+            GridElement{mfIntLabel, DefaultStyle, 0, Spec::Character::StatType::Intelligence, true, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectModifier},
+            GridElement{mfWisLabel, DefaultStyle, 0, Spec::Character::StatType::Wisdom, true, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectModifier},
+            GridElement{mfDexLabel, DefaultStyle, 0, Spec::Character::StatType::Dexterity, true, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectModifier},
+            GridElement{mfConLabel, DefaultStyle, 0, Spec::Character::StatType::Constitution, true, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectModifier},
+            GridElement{mfChaLabel, DefaultStyle, 0, Spec::Character::StatType::Charisma, true, true, true, DummyStateDelegate, &UIHandler::Callbacks::Race::SelectModifier}
          }
       };      
    }
@@ -205,6 +242,23 @@ namespace UI
    static constexpr ElementStyle CharacterEditorStyle = {CharacterEditorSizes, CharacterEditorPadding, ImTextureID{}};
    namespace Character
    {
+      static const std::string chStrLabel = ("ch::STR");
+      static const std::string chIntLabel = ("ch::INT");
+      static const std::string chWisLabel = ("ch::WIS");
+      static const std::string chDexLabel = ("ch::DEX");
+      static const std::string chConLabel = ("ch::CON");
+      static const std::string chChaLabel = ("ch::CHA");      
+      static Template CharacterStatTemplates{
+         {
+            GridElement{chStrLabel, DefaultStyle, 0, Spec::Character::StatType::Strength, true, false, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{chIntLabel, DefaultStyle, 0, Spec::Character::StatType::Intelligence, true, false, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{chWisLabel, DefaultStyle, 0, Spec::Character::StatType::Wisdom, true, false, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{chDexLabel, DefaultStyle, 0, Spec::Character::StatType::Dexterity, true, false, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{chConLabel, DefaultStyle, 0, Spec::Character::StatType::Constitution, true, false, true, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{chChaLabel, DefaultStyle, 0, Spec::Character::StatType::Charisma, true, false, true, DummyStateDelegate, DummyCallbackTarget}
+         }
+      };
+      
       static const std::string agLawGoodLabel        = ("ag::Lawful Good");
       static const std::string agLawNeutralLabel     = ("ag::Lawful Neutral");
       static const std::string agLawEvilLabel        = ("ag::Lawful Evil");
@@ -217,33 +271,28 @@ namespace UI
       static const std::string agChaoticNeutralLabel = ("ag::Chaotic Neutral");
       static const std::string agChaoticEvilLabel    = ("ag::Chaotic Evil");      
       
+      
       static Template LawfulAlignmentTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{agLawGoodLabel,        CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agLawNeutralLabel,     CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agLawEvilLabel,        CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{agLawGoodLabel,        CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::LawGood, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
+            GridElement{agLawNeutralLabel,     CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::LawNeutral, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
+            GridElement{agLawEvilLabel,        CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::LawEvil, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment}
          }
       };
 
       static Template NeutralAlignmentTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{agNeutralGoodLabel,    CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agNeutralNeutralLabel, CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agNeutralEvilLabel,    CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{agNeutralGoodLabel,    CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::NeutralGood, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
+            GridElement{agNeutralNeutralLabel, CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::NeutralNeutral, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
+            GridElement{agNeutralEvilLabel,    CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::NeutralEvil, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment}
          }
       };
 
       static Template ChaoticAlignmentTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{agChaoticGoodLabel,    CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agChaoticNeutralLabel, CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{agChaoticEvilLabel,    CharacterEditorStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget}
+            GridElement{agChaoticGoodLabel,    CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::ChaosGood, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
+            GridElement{agChaoticNeutralLabel, CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::ChaosNeutral, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
+            GridElement{agChaoticEvilLabel,    CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::ChaosEvil, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment}
          }
       };
    }
@@ -259,12 +308,10 @@ namespace UI
       static const std::string LoadClassLabel = ("cl::Load Class Config @todo Finish");
       static const std::string CloseClassLabel = ("cl::Close Class Editor");
       static Template ClassMenuControlTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{SaveClassLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, &UIHandler::SaveClass},
-            GridElement{LoadClassLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{ CloseClassLabel, MenuStyle, INVALID_INDEX, false, &UIHandler::GetIsClassEditorOpen, &UIHandler::SetClassEditorOpen} 
+            GridElement{SaveClassLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, &UIHandler::SaveClass},
+            GridElement{LoadClassLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX,  false, true, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{ CloseClassLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX,  false, true, false, &UIHandler::GetIsClassEditorOpen, &UIHandler::SetClassEditorOpen} 
          }
       };
 
@@ -272,12 +319,10 @@ namespace UI
       static const std::string LoadRaceLabel = ("ra::Load Race Config @todo Finish");
       static const std::string CloseRaceLabel = ("ra::Close Race Editor");
       static Template RaceMenuControlTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{SaveRaceLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, &UIHandler::SaveRace},
-            GridElement{LoadRaceLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{CloseRaceLabel, MenuStyle, INVALID_INDEX, false, &UIHandler::GetIsRaceEditorOpen, &UIHandler::SetRaceEditorOpen}
+            GridElement{SaveRaceLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, &UIHandler::SaveRace},
+            GridElement{LoadRaceLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{CloseRaceLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, &UIHandler::GetIsRaceEditorOpen, &UIHandler::SetRaceEditorOpen}
          }
       };
 
@@ -286,12 +331,10 @@ namespace UI
       static const std::string LoadCharacterLabel = ("ch::Load Character Config @todo Finish");
       static const std::string CloseCharacterLabel = ("ch::Close Character Editor");
       static Template CharacterMenuControlTemplates{
-         INVALID_INDEX,
-         INVALID_INDEX,
          {
-            GridElement{SaveCharacterLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, &UIHandler::SaveCharacter},
-            GridElement{LoadCharacterLabel, MenuStyle, INVALID_INDEX, false, DummyStateDelegate, DummyCallbackTarget},
-            GridElement{CloseCharacterLabel, MenuStyle, INVALID_INDEX, false, &UIHandler::GetIsCharacterEditorOpen, &UIHandler::SetCharacterEditorOpen}
+            GridElement{SaveCharacterLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, &UIHandler::SaveCharacter},
+            GridElement{LoadCharacterLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, DummyCallbackTarget},
+            GridElement{CloseCharacterLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, &UIHandler::GetIsCharacterEditorOpen, &UIHandler::SetCharacterEditorOpen}
          }
       };
    }
