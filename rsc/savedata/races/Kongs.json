@@ -1,0 +1,7 @@
+{    
+  "Name" : "Kongs",    
+  "ID" : 4,    
+  "AbilityName" : "Default",    
+  "MinimumStats" : [ 14,0,11,0,0,0],    
+  "Modifiers" : [ 0,0,0,0,0,0],    
+  "AllowedClassIDs" : [ -1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}

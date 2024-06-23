@@ -1,0 +1,7 @@
+{
+  "Name" : "Elfier",    
+  "ID" : 2,    
+  "AbilityName" : "Default",    
+  "MinimumStats" : [ 13,0,0,5,0,0],    
+  "Modifiers" : [ -17,4,8,0,0,0],    
+  "AllowedClassIDs" : [ -1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}

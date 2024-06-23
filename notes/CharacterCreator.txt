@@ -26,7 +26,7 @@ IP-ROGRESS:
 Major overhaul, removed nlohmanns json library, partially hand-rolled a new solution
 - Removed Nlohmanns json library. it is very inconsistent and was not able to parse the files it itself has created. Atleast on windows it is fickle to say the best 
 --- This ended up with a number of hours rueing the day nlohmann was created and then after resigning myself to use it I then replacing it with a much more bare bones json parser, 
---- The bare-bones parser is in vendors now, and it required me to hand-roll much of the serialization and deserialization for our Classes, Races and Character myself. this has been perfectly reliable however adn we can consumer our own creates jsons
+--- The bare-bones parser is in vendors now, and it required me to hand-roll much of the serialization and deserialization for our Classes, Races and Character myself. this has been perfectly reliable however and we can consume our own creates jsons
 
 Other:
 - (DONE) Fix Alignment chart, remove hacky 3x3 setup and just calculate a max width to force it to be 3x3
@@ -34,8 +34,18 @@ Other:
 
 
 
+DONE:
+- (DONE) Write a widget which allows us to select a loaded character config into our character editor
+- (DONE) Refactored the payloads to be their own struct type, as most functions shared the same input parameters
+- (DONE) bind events to buttons which need it but might not have it yet 
+- Test roll buttons, seems to work but is not displaying any value visually, looking into it next
+
+- SerializeAbilityScores implemented now
+
+- Some editor types inherit from a shared type named BaseCharacterEditorClass, mainly as a form of tagging
+
 TODO:
-- (TODO) Actually seed with a valid time based seed, currently only teh default seed is being used which is the same everytime
+- Actually seed with a valid time based seed, currently only teh default seed is being used which is the same everytime
 
 
 

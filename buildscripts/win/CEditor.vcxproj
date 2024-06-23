@@ -196,16 +196,19 @@
     <Content Include="..\..\rsc\Fonts\Besley\static\Besley-Regular.ttf" />
     <Content Include="..\..\rsc\Fonts\Besley\static\Besley-SemiBold.ttf" />
     <Content Include="..\..\rsc\Fonts\Besley\static\Besley-SemiBoldItalic.ttf" />
+    <Content Include="..\..\rsc\savedata\characters\Glorp the Hugums.json" />
+    <Content Include="..\..\rsc\savedata\characters\KingKong.json" />
     <Content Include="..\..\rsc\savedata\classes\Bard.json" />
     <Content Include="..\..\rsc\savedata\classes\Healer.json" />
     <Content Include="..\..\rsc\savedata\classes\Necromancer.json" />
     <Content Include="..\..\rsc\savedata\classes\Rogue.json" />
     <Content Include="..\..\rsc\savedata\classes\Warrior.json" />
     <Content Include="..\..\rsc\savedata\classes\Wizard.json" />
+    <Content Include="..\..\rsc\savedata\races\Elfier.json" />
+    <Content Include="..\..\rsc\savedata\races\Kongs.json" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="..\..\rsc\savedata\characters\" />
-    <Folder Include="..\..\rsc\savedata\races\" />
+    <Folder Include="..\..\rsc\savedata\classes\" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -135,7 +135,9 @@ namespace JHelper
          std::string Inner{"[ "};
          for (int Step = 0; Step < ArraySize; )
          {
-            Inner += std::to_string(Values[Step++]) + (Step>= ArraySize ? std::string{} : std::string{","});
+            int NextStep = Step + 1;
+            Inner += std::to_string(Values[Step]) + (NextStep >= ArraySize ? std::string{} : std::string{","});
+            ++Step;
          }
          Inner += std::string{"]"};
          
@@ -149,12 +151,17 @@ namespace JHelper
 
 
       template<bool IsFirstEntry = false, bool IsWithoutStartingBlock = true>
-      std::string SerializeAbilityScores(const char* ArrayLabel, const int* Values, int ArraySize = 6)
+      std::string SerializeAbilityScores(const char* ArrayLabel, const StatRollReturn* Values, int ArraySize = 6)
       {
          std::string Inner{"[ "};
          for (int Step = 0; Step < ArraySize; )
          {
-            Inner += std::to_string(Values[Step++]) + (Step>= ArraySize ? std::string{} : std::string{","});
+            const StatRollReturn& CurrentRollStep = Values[Step++];
+            Inner += "{";
+            Inner += R"("RollValue" : )" + std::to_string(CurrentRollStep.RollValue);
+            Inner += R"(, "ModifiedValue" : )" + std::to_string(CurrentRollStep.ModifiedValue);
+            Inner += "}";
+            Inner += (Step >= ArraySize ? std::string{} : std::string{","});
          }
          Inner += std::string{"]"};
          
@@ -206,11 +213,10 @@ namespace JHelper
          if (IsExpectedElement(HitDieEntry, "HitDieShape", json_type_number) == false) { return ExitEarly(root); /* @todo log error */ }
          PoorMansDeserializer::DeserializeEnum<Platonic::Dice>(Class.HitDieShape, HitDieEntry);
 
-
          free(root); // Free the malloced memory for this read
          return Class;
-         
       }
+      
       void SaveConfig(const CharacterClass& ClassDescr)
       {
          const std::string SerializedString =
@@ -286,13 +292,12 @@ namespace JHelper
             + PoorMansSerializer::SerializeGenericNumber("ID", RaceDescr.ID)
             + PoorMansSerializer::SerializeGenericName("AbilityName", RaceDescr.AbilityName)
             + PoorMansSerializer::SerializeIntArray("MinimumStats", &RaceDescr.MinimumStats[0], 6)
-            + PoorMansSerializer::SerializeIntArray("MinimumStats", &RaceDescr.MinimumStats[0], 6)
             + PoorMansSerializer::SerializeIntArray("Modifiers", &RaceDescr.Modifiers[0], 6)
             + PoorMansSerializer::SerializeIntArray("AllowedClassIDs", &RaceDescr.AllowedClassIDs[0], 20)
          + PoorMansSerializer::EndSerialize();
          
          // // This won't be portable but works for now
-         std::string ConfigsDir = "../../rsc/savedata/classes/";
+         std::string ConfigsDir = "../../rsc/savedata/races/";
          ConfigsDir = ConfigsDir + RaceDescr.Name + ".json";
          
          std::ofstream outfilestream(ConfigsDir.c_str());
@@ -300,6 +305,7 @@ namespace JHelper
          
       }
    }
+   
    namespace Character
    {
       DnDCharacter LoadConfig(const std::string& FileName)
@@ -367,15 +373,11 @@ namespace JHelper
             + PoorMansSerializer::SerializeGenericNumber("ID", CharDescr.ID)
             + PoorMansSerializer::SerializeGenericNumber("RaceID", CharDescr.Race.ID)
             + PoorMansSerializer::SerializeGenericNumber("ClassID", CharDescr.Class.ID)
-
-            // @todo finish by next commit Ability Scores serialization
-            //+ PoorMansSerializer::SerializeIntArray("AbilityScores", &CharDescr.MinimumStats[0], 6)
-
+            + PoorMansSerializer::SerializeAbilityScores("AbilityScores", &CharDescr.AbilityScores[0], 6)
             + PoorMansSerializer::SerializeGenericNumber("Alignment", CharDescr.Alignment)
             + PoorMansSerializer::SerializeGenericNumber("Hitpoints", CharDescr.Hitpoints)
             + PoorMansSerializer::SerializeGenericNumber("Gold", CharDescr.Gold)
          + PoorMansSerializer::EndSerialize();
-
 
          // // This won't be portable but works for now
          std::string ConfigsDir = "../../rsc/savedata/characters/";

@@ -1,0 +1,16 @@
+{    
+    "Name" : "Glorp the Hugims",    
+    "ID" : 0,    
+    "RaceID" : -1,    
+    "ClassID" : 2,    
+    "AbilityScores" : [ 
+        {"RollValue" : 6, "ModifiedValue" : 6},
+        {"RollValue" : 9, "ModifiedValue" : 9},
+        {"RollValue" : 4, "ModifiedValue" : 4},
+        {"RollValue" : 5, "ModifiedValue" : 5},
+        {"RollValue" : 7, "ModifiedValue" : 7},
+        {"RollValue" : 13, "ModifiedValue" : 13}],    
+    "Alignment" : 3,    
+    "Hitpoints" : 0,    
+    "Gold" : 70
+}

@@ -138,6 +138,9 @@ int main(int, char**)
    // Run main loop
    MainLoop(IODevice);
 
+   // Deinit ui before ctors of certain maps are called  
+   UIHandler::DeinitUI();
+
    // Cleanup
    ImGui_ImplDX11_Shutdown();
    ImGui_ImplWin32_Shutdown();

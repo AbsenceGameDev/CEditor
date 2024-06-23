@@ -4,15 +4,16 @@
 
 #include "imgui.h"
 #include <d3d11.h>
+#include <deque>
 #include <functional>
 #include <map>
+#include <set>
 #include <vector>
 
+#include "editor_core.h"
 #include "../inc/dataformat.h"
 #include "../inc/ruleset.h"
 
-auto DummyStateDelegate = [](const struct GridElement&) -> bool { return false; };
-auto DummyCallbackTarget = [](const struct GridElement&, bool) -> void { };
 
 using TemplateElementKeyIt = std::_Tree_iterator<std::_Tree_val<std::_Tree_simple_types<std::pair<struct Template* const, struct GridElement*>>>>&&;
 using TemplateElementValueIt  = std::_Tree_iterator<std::_Tree_val<std::_Tree_simple_types<std::pair<struct GridElement* const,  struct Template*>>>>&&;
@@ -20,12 +21,76 @@ using TemplateElementValueIt  = std::_Tree_iterator<std::_Tree_val<std::_Tree_si
 // fwd decl.
 struct Template;
 
+struct ButtonPayload
+{
+   ButtonPayload(GridElement& ElementBound)
+      : CallingVisualElement(&ElementBound), Target(nullptr), SetOpen(false) {}
+   ButtonPayload(GridElement& ElementBound, BaseCharacterEditorClass* BaseTarget)
+   : CallingVisualElement(&ElementBound), Target(BaseTarget), SetOpen(false) {}
+   ButtonPayload(GridElement& ElementBound, BaseCharacterEditorClass* BaseTarget, bool SetState)
+      : CallingVisualElement(&ElementBound), Target(BaseTarget), SetOpen(SetState) {}
+
+   GridElement* CallingVisualElement;
+   BaseCharacterEditorClass* Target;
+   bool SetOpen;
+};
+auto DummyStateDelegate = [](const struct ButtonPayload&) -> bool { return false; };
+auto DummyCallbackTarget = [](const struct ButtonPayload&) -> void { };
+typedef void (*CallbackSpace)(struct ButtonPayload&) ; //= UIHandler::Callbacks::Race::SelectAllowedClass;
+
 class UIHandler
 {
 public:
+
+   typedef struct Callbacks
+   {
+      static bool SelectInclusive(ButtonPayload& ButtonPayload);
+      static void SelectExclusive(ButtonPayload& ButtonPayload);
+      typedef struct Class
+      {
+         static void SelectPrimeStat(ButtonPayload& ButtonPayload);
+         static void SelectHitDie(ButtonPayload& ButtonPayload);
+      }class_t;
+
+      typedef struct Race
+      {
+         static void SelectMinimumStat(ButtonPayload& ButtonPayload);
+         static void SelectModifier(ButtonPayload& ButtonPayload);
+         static void SelectAllowedClass(ButtonPayload& ButtonPayload);
+      }race_t;
+
+      typedef struct Character
+      {
+         static void SelectRace(ButtonPayload& ButtonPayload);
+         static void SelectClass(ButtonPayload& ButtonPayload);
+         static void SelectAlignment(ButtonPayload& ButtonPayload);
+      }character_t;
+
+      typedef struct CharacterPicker
+      {
+         static void SelectCharacter(ButtonPayload& ButtonPayload);
+         static DnDCharacter& StowedCharacterForPicker(DnDCharacter* PotentialOverride = nullptr)
+         {
+            static DnDCharacter Character{INVALID_INDEX};
+            if (PotentialOverride != nullptr) { Character = *PotentialOverride; }
+            return Character;
+         };
+      }characterpicker_t;
+   }callbacks_t;
+   
+   static void DeinitUI();
+
+   static std::string GetCharacterEditorStateLabel(bool& State);
+   static std::string GetClassEditorStateLabel(bool& State);
+   static std::string GetRaceEditorStateLabel(bool& State);
+   static std::string GetCharacterSelectorStateLabel(bool& State);
    static void DrawAppMainMenuBar();
    static void ProcessGridElement(Template* Category, GridElement& Element);
    static void DrawTemplates(Template* Category);
+   static void PaintClassEditor(ImGuiInputTextFlags SharedInputTextFlags);
+   static void PaintRaceEditor(ImGuiInputTextFlags SharedInputTextFlags);
+   static void PaintCharacterEditor(ImGuiInputTextFlags SharedInputTextFlags);
+   static void PaintCharacterSelector();
    static void OnPaint(ImGuiIO& io, ImVec4 ClearColor);
 
    // text callback sig
@@ -39,55 +104,74 @@ public:
    // static void SaveRace(bool SetOpen);
    // static void SaveCharacter(bool SetOpen);
 
-   static void SaveClass(GridElement& CallingViualElement, bool SetOpen);
-   static void SaveRace(GridElement& CallingViualElement, bool SetOpen);
-   static void SaveCharacter(GridElement& CallingViualElement, bool SetOpen);
+   static void SaveClass(ButtonPayload& ButtonPayload);
+   static void SaveRace(ButtonPayload& ButtonPayload);
+   static void SaveCharacter(ButtonPayload& ButtonPayload);
+   static void LoadCharacter(ButtonPayload& ButtonPayload);
 
-   typedef struct Callbacks
-   {
-      static bool SelectInclusive(GridElement& CallingVisualElement);
-      static void SelectExclusive(GridElement& CallingVisualElement);
-      typedef struct Class
-      {
-         static void SelectPrimeStat(GridElement& CallingVisualElement, bool Select);
-         static void SelectHitDie(GridElement& CallingVisualElement, bool Select);
-      }class_t;
+   template<class TType = CharacterClass, CallbackSpace TCallbackSpace = Callbacks::Race::SelectAllowedClass>
+   static void RequestNewTemplateEntryForDataWithID(Template* TGroup, std::string FourCharacterPrefix, const TType& ClassData);
+   static void RemoveGridElement(const GridElement* Consider, Template* TGroup);
 
-      typedef struct Race
-      {
-         static void SelectMinimumStat(GridElement& CallingVisualElement, bool Select);
-         static void SelectModifier(GridElement& CallingVisualElement, bool Select);
-         static void SelectAllowedClass(GridElement& CallingVisualElement, bool Select);
-      }race_t;
-
-      typedef struct Character
-      {
-         static void SelectAlignment(GridElement& CallingVisualElement, bool Select);
-      }character_t;   
-   }callbacks_t;
+   template<class TType = CharacterClass, class IteratorType, 
+      CallbackSpace TCallbackSpace = Callbacks::Race::SelectAllowedClass>
+   static void UpdateGridElements(
+      Template* Group,
+      std::map<int, TType>& MappedGroup,
+      std::string FourCharacterPrefix,
+      std::deque<const GridElement*> RemovalDeque);
    
-   static void SetClassEditorOpen(GridElement&       CallingViualElement, bool SetOpen) { DrawClassEditor     = SetOpen; }
-   static void SetRaceEditorOpen(GridElement&        CallingViualElement, bool SetOpen) { DrawRaceEditor      = SetOpen; }
-   static void SetCharacterEditorOpen(GridElement&   CallingViualElement, bool SetOpen) { DrawCharacterEditor = SetOpen; }
-   static bool GetIsClassEditorOpen(GridElement&     CallingViualElement) { return DrawClassEditor; }
-   static bool GetIsRaceEditorOpen(GridElement&      CallingViualElement) { return DrawRaceEditor; }
-   static bool GetIsCharacterEditorOpen(GridElement& CallingViualElement) { return DrawCharacterEditor; }
-
-
+   static void SetClassEditorOpen(ButtonPayload& Payload)         { DrawClassEditor       = Payload.SetOpen; }
+   static void SetRaceEditorOpen(ButtonPayload& Payload)          { DrawRaceEditor        = Payload.SetOpen; }
+   static void SetCharacterEditorOpen(ButtonPayload& Payload)     { DrawCharacterEditor   = Payload.SetOpen; }
+   static void SetCharacterSelectorOpen(ButtonPayload& Payload)   { DrawCharacterSelector = Payload.SetOpen; }
+   static bool GetIsClassEditorOpen(ButtonPayload& Payload)       { return DrawClassEditor;}
+   static bool GetIsRaceEditorOpen(ButtonPayload& Payload)        { return DrawRaceEditor; }
+   static bool GetIsCharacterEditorOpen(ButtonPayload& Payload)   { return DrawCharacterEditor; }
+   static bool GetIsCharacterSelectorOpen(ButtonPayload& Payload) { return DrawCharacterSelector; }
+   
    // 
    // Utility
    static ImFont* LoadFonts(ImGuiIO& io);
 
-   static std::map<Template*, GridElement*> LastSelectedElementPerTemplate;
-   static std::map<GridElement*, Template*> LastSelectedElementPerTemplate_BackMapping;
-   static std::map<Template*, GridElement*> CurrentSelectedElementPerTemplate;
-   static std::map<GridElement*, Template*> CurrentSelectedElementPerTemplate_BackMapping;
+   // These maps will trigger deallocation errors if manages as member variables,
+   // this way we can avoid them being counted as non-local objects and thus avoid them
+   // being initialized/deinitialized by the module
+   static std::map<Template*, GridElement*>& LastSelectedElementPerTemplate()
+   {
+      static std::map<Template*, GridElement*> Map;
+      return Map;
+   }
+   static std::map<GridElement*, Template*>& LastSelectedElementPerTemplate_BackMapping()
+   {
+      static std::map<GridElement*, Template*> Map;
+      return Map;
+   }
+   static std::map<Template*, GridElement*>& CurrentSelectedElementPerTemplate()
+   {
+      static std::map<Template*, GridElement*> Map;
+      return Map;
+   }
+   static std::map<GridElement*, Template*>& CurrentSelectedElementPerTemplate_BackMapping()
+   {
+      static std::map<GridElement*, Template*> Map;
+      return Map;
+   }
+
+   
+   //
+   //
+   // static std::map<Template*, GridElement*> LastSelectedElementPerTemplate;
+   // static std::map<GridElement*, Template*> LastSelectedElementPerTemplate_BackMapping;
+   // static std::map<Template*, GridElement*> CurrentSelectedElementPerTemplate;
+   // static std::map<GridElement*, Template*> CurrentSelectedElementPerTemplate_BackMapping;
    
    static ImFont* GlobalSmallFont;
    static ImFont* GlobalLargeFont;
    static bool DrawClassEditor;
    static bool DrawRaceEditor;
    static bool DrawCharacterEditor;
+   static bool DrawCharacterSelector;
    static bool BlockEditors;
 
    static std::string LastEditedClassName;
@@ -121,8 +205,8 @@ struct GridElement
       bool InAllowNegativeValues = false,
       bool InAllowSelection      = true,
       bool InDisplayValue        = true, 
-      std::function<bool(GridElement&)> InStateDelegate = {},
-      std::function<void(GridElement&, bool)> InCallbackTarget = {}
+      std::function<bool(ButtonPayload&)> InStateDelegate = {},
+      std::function<void(ButtonPayload&)> InCallbackTarget = {}
    )
       : Label(InLabel)
         , Style(InStyle)
@@ -137,6 +221,20 @@ struct GridElement
    {
    }
 
+   bool operator==(const GridElement& Other) const
+   {
+      return this->Label == Other.Label; // we only care about the label
+   }
+   bool operator!=(const GridElement& Other) const
+   {
+      return (*this == Other) == false;
+   }
+   bool operator<(const GridElement& Other) const
+   {
+      constexpr std::hash<std::string> StringHasher;
+      return StringHasher(this->Label) < StringHasher(Other.Label);
+   }
+   
    std::string Label{"DefaultLabel"};
    ElementStyle Style               = {};
    bool         IsSelected          = false;
@@ -146,13 +244,27 @@ struct GridElement
    bool         AllowSelection      = true;
    bool         DisplayValue        = true;
 
-   std::function<bool(GridElement&)> GetStateDelegate;
-   std::function<void(GridElement&, bool)> CallbackTarget;
+   std::function<bool(ButtonPayload&)> GetStateDelegate;
+   std::function<void(ButtonPayload&)> CallbackTarget;
 };
 
 typedef struct Template
 {
-   std::vector<GridElement> Inner;
+   using  TemplateIt = const std::_Tree_const_iterator<std::_Tree_val<std::_Tree_simple_types<GridElement>>>;
+   inline bool DoesGridElementExist(const GridElement& Other)
+   {
+      return Inner.find(Other) != Inner.end();
+   }
+   inline void Emplace(const GridElement& Consider)
+   {
+      Inner.emplace(Consider);
+   }
+   inline void Remove(const GridElement& Consider)
+   {
+      Inner.erase(Consider);
+   }
+
+   std::set<GridElement> Inner;
 
    ImVec2 MaxSize {-1, -1}; // {x,y} Negative one indicates there is no limit 
 } Template_t;
@@ -201,6 +313,10 @@ namespace UI
 
    namespace Race
    {
+      // Potentially selectable classes, gets modified each step, 
+      static Template ClassTemplates;
+
+      
       static const std::string msStrLabel = ("ms::STR");
       static const std::string msIntLabel = ("ms::INT");
       static const std::string msWisLabel = ("ms::WIS");
@@ -237,11 +353,21 @@ namespace UI
       };      
    }
 
+
    static constexpr ImVec2 CharacterEditorPadding = {20, 20};
    static constexpr ImVec2 CharacterEditorSizes = {120, 40};
    static constexpr ElementStyle CharacterEditorStyle = {CharacterEditorSizes, CharacterEditorPadding, ImTextureID{}};
    namespace Character
    {
+      // Potentially selectable characters, gets modified each step, 
+      static Template LoadedCharacterTemplates;      
+            
+      // Potentially selectable classes, gets modified each step, 
+      static Template ClassTemplates;
+      
+      // Potentially selectable races, gets modified each step, 
+      static Template RaceTemplates;
+      
       static const std::string chStrLabel = ("ch::STR");
       static const std::string chIntLabel = ("ch::INT");
       static const std::string chWisLabel = ("ch::WIS");
@@ -296,38 +422,44 @@ namespace UI
    namespace Menu
    {
       static const std::string SaveClassLabel = ("cl::Save Class Config @todo Finish");
-      static const std::string LoadClassLabel = ("cl::Load Class Config @todo Finish");
+      // static const std::string LoadClassLabel = ("cl::Load Class Config @todo Finish");
       static const std::string CloseClassLabel = ("cl::Close Class Editor");
       static Template ClassMenuControlTemplates{
          {
             GridElement{SaveClassLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, &UIHandler::SaveClass},
-            GridElement{LoadClassLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX,  false, true, false, DummyStateDelegate, DummyCallbackTarget},
             GridElement{ CloseClassLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX,  false, true, false, &UIHandler::GetIsClassEditorOpen, &UIHandler::SetClassEditorOpen} 
          }
       };
 
       static const std::string SaveRaceLabel = ("ra::Save Race Config @todo Finish");
-      static const std::string LoadRaceLabel = ("ra::Load Race Config @todo Finish");
+      // static const std::string LoadRaceLabel = ("ra::Load Race Config @todo Finish");
       static const std::string CloseRaceLabel = ("ra::Close Race Editor");
       static Template RaceMenuControlTemplates{
          {
             GridElement{SaveRaceLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, &UIHandler::SaveRace},
-            GridElement{LoadRaceLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, DummyCallbackTarget},
             GridElement{CloseRaceLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, &UIHandler::GetIsRaceEditorOpen, &UIHandler::SetRaceEditorOpen}
          }
       };
 
 
       static const std::string SaveCharacterLabel = ("ch::Save Character Config @todo Finish");
-      static const std::string LoadCharacterLabel = ("ch::Load Character Config @todo Finish");
       static const std::string CloseCharacterLabel = ("ch::Close Character Editor");
       static Template CharacterMenuControlTemplates{
          {
             GridElement{SaveCharacterLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, &UIHandler::SaveCharacter},
-            GridElement{LoadCharacterLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, DummyCallbackTarget},
             GridElement{CloseCharacterLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, &UIHandler::GetIsCharacterEditorOpen, &UIHandler::SetCharacterEditorOpen}
          }
       };
+
+      static const std::string LoadCharacterLabel = ("ch::Load Character Config @todo Finish");
+      static const std::string CloseCharacterSelectorLabel = ("ch::Close Character Selector");
+      static Template CharacterSelectorControlTemplates{
+            {
+               GridElement{LoadCharacterLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, DummyStateDelegate, &UIHandler::LoadCharacter},
+               GridElement{CloseCharacterLabel, MenuStyle, INVALID_INDEX, INVALID_INDEX, false, true, false, &UIHandler::GetIsCharacterSelectorOpen, &UIHandler::SetCharacterSelectorOpen}
+            }
+      };      
+      
    }
 }
 

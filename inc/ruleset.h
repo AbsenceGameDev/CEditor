@@ -203,10 +203,14 @@ namespace Spec
    }
 };
 
+typedef struct BaseCharacterEditorClass
+{
+   
+};
 
 static int IncrementalCID = 0;
 
-struct CharacterClass
+struct CharacterClass : public BaseCharacterEditorClass
 {
    CharacterClass(): Name{}, PrimeStat(), _HitDice(Platonic::Dice::E4D, -1)
    {
@@ -248,7 +252,7 @@ private:
 
 static int IncrementalRID = 0;
 
-struct CharacterRace
+struct CharacterRace : public BaseCharacterEditorClass
 {
    CharacterRace(): Name{"Default\0"}, AbilityName{"Default\0"} { }
 
@@ -303,10 +307,12 @@ struct StatRollReturn
 
 static int IncrementalID = 0;
 
-typedef struct DnDCharacter
+typedef struct DnDCharacter : public BaseCharacterEditorClass
 {
-   DnDCharacter(){};
-   
+   DnDCharacter(): Name{} { }
+
+   DnDCharacter(int InID) : Name{}, ID(InID) {}
+
 private:
    DnDCharacter(
       const GenericName& InName,
