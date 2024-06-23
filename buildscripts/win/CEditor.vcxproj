@@ -86,7 +86,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\vendor\nlohmann\json;..\..\vendor\imgui;..\..\vendor\imgui\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\vendor\sheredom\json;..\..\vendor\imgui;..\..\vendor\imgui\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -99,8 +99,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\vendor\nlohmann\json;..\..\vendor\imgui;..\..\vendor\imgui\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\vendor\sheredom\json;..\..\vendor\imgui;..\..\vendor\imgui\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -116,7 +115,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..\vendor\nlohmann\json;..\..\vendor\imgui;..\..\vendor\imgui\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\vendor\sheredom\json;..\..\vendor\imgui;..\..\vendor\imgui\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -135,7 +134,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..\vendor\nlohmann\json;..\..\vendor\imgui;..\..\vendor\imgui\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\vendor\sheredom\json;..\..\vendor\imgui;..\..\vendor\imgui\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -159,10 +158,11 @@
     <ClInclude Include="..\..\vendor\imgui\imgui_internal.h" />
     <ClInclude Include="..\..\vendor\imgui\backends\imgui_impl_dx11.h" />
     <ClInclude Include="..\..\vendor\imgui\backends\imgui_impl_win32.h" />
-    <ClInclude Include="..\..\vendor\nlohmann\json\json.hpp" />
+    <ClInclude Include="..\..\vendor\sheredom\json\json.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\editor_core.cpp"/>
+    <ClCompile Include="..\..\src\jsonhelper.cpp"/>
     <ClCompile Include="..\..\vendor\imgui\imgui.cpp" />
     <ClCompile Include="..\..\vendor\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\vendor\imgui\imgui_draw.cpp" />
@@ -178,6 +178,7 @@
     <None Include="..\..\vendor\imgui\misc\debuggers\imgui.natvis" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="..\..\notes\CharacterCreator.txt" />
     <Content Include="..\..\rsc\captureage-recruitment-sr-engineer-tooling-test-2024.pdf" />
     <Content Include="..\..\rsc\Fonts\Besley\Besley-Italic-VariableFont_wght.ttf" />
     <Content Include="..\..\rsc\Fonts\Besley\Besley-VariableFont_wght.ttf" />
@@ -195,6 +196,16 @@
     <Content Include="..\..\rsc\Fonts\Besley\static\Besley-Regular.ttf" />
     <Content Include="..\..\rsc\Fonts\Besley\static\Besley-SemiBold.ttf" />
     <Content Include="..\..\rsc\Fonts\Besley\static\Besley-SemiBoldItalic.ttf" />
+    <Content Include="..\..\rsc\savedata\classes\Bard.json" />
+    <Content Include="..\..\rsc\savedata\classes\Healer.json" />
+    <Content Include="..\..\rsc\savedata\classes\Necromancer.json" />
+    <Content Include="..\..\rsc\savedata\classes\Rogue.json" />
+    <Content Include="..\..\rsc\savedata\classes\Warrior.json" />
+    <Content Include="..\..\rsc\savedata\classes\Wizard.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="..\..\rsc\savedata\characters\" />
+    <Folder Include="..\..\rsc\savedata\races\" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

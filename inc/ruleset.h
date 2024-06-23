@@ -36,19 +36,22 @@ inline void PassThroughStrCpy(StrcpyFP StrCpy, GenericName& __restrict Target, c
 
 
 /** @brief max */
-static constexpr int MaxV(const int CompareA, const int CompareB)
+template<typename  TType>
+static constexpr TType MaxV(const TType CompareA, const TType CompareB)
 {
    return (CompareB < CompareA) ? CompareA : CompareB;
 }
 
 /** @brief min */
-static constexpr int MinV(const int compareA, const int compareB)
+template<typename  TType>
+static constexpr TType MinV(const TType compareA, const TType compareB)
 {
    return (compareA < compareB) ? compareA : compareB;
 }
 
 /** @brief Find Max of minimum value vs. result of Min(x Max), keeps result in range [Min <= X <= Max] */
-static constexpr int ClampData(const int inValue, const int minValue, const int maxValue)
+template<typename  TType>
+static constexpr TType ClampData(const TType inValue, const TType minValue, const TType maxValue)
 {
    return MaxV(MinV(inValue, maxValue), minValue);
 };

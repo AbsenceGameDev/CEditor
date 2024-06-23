@@ -9,6 +9,8 @@ IP-ROGRESS:
 - (DONE) Have set up all boilerplate needed for my needed ui elements
 - (DONE) Have almost finished the class menu
 
+
+
 - (DONE )All menus can be closed from wihtin themselves, setting up the menu bar now 
 - (DONE) Afterwards, create a bar menu where any of the 3 editors can be opened
 
@@ -21,9 +23,20 @@ IP-ROGRESS:
 - (DONE) Nlohmnn now works as intended and outputs our created classes, races and characters to file, as-well as fix outstream not being called properly
 
 
+Major overhaul, removed nlohmanns json library, partially hand-rolled a new solution
+- Removed Nlohmanns json library. it is very inconsistent and was not able to parse the files it itself has created. Atleast on windows it is fickle to say the best 
+--- This ended up with a number of hours rueing the day nlohmann was created and then after resigning myself to use it I then replacing it with a much more bare bones json parser, 
+--- The bare-bones parser is in vendors now, and it required me to hand-roll much of the serialization and deserialization for our Classes, Races and Character myself. this has been perfectly reliable however adn we can consumer our own creates jsons
+
+Other:
+- (DONE) Fix Alignment chart, remove hacky 3x3 setup and just calculate a max width to force it to be 3x3
+- (DONE) Wrote code to handle threading of the scan in rsc/savedata for scanning our classes/races/characters and load them before anything else
+
+
+
 TODO:
-- (TODO) Scan rsc&saved for class/race/character configs and load them before anything else
 - (TODO) Actually seed with a valid time based seed, currently only teh default seed is being used which is the same everytime
+
 
 
 3. If I have time, extend the character creator/generator library as suggested by the test instructions

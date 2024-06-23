@@ -1,6 +1,6 @@
 {
-    "HitDieShape": 20,
-    "ID": 0,
     "Name": "Necromancer",
-    "PrimeStat": 1
+    "ID": 0,
+    "PrimeStat": 1,
+    "HitDieShape": 20
 }

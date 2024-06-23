@@ -65,9 +65,6 @@ public:
          static void SelectAlignment(GridElement& CallingVisualElement, bool Select);
       }character_t;   
    }callbacks_t;
-
-   
-   
    
    static void SetClassEditorOpen(GridElement&       CallingViualElement, bool SetOpen) { DrawClassEditor     = SetOpen; }
    static void SetRaceEditorOpen(GridElement&        CallingViualElement, bool SetOpen) { DrawRaceEditor      = SetOpen; }
@@ -91,6 +88,7 @@ public:
    static bool DrawClassEditor;
    static bool DrawRaceEditor;
    static bool DrawCharacterEditor;
+   static bool BlockEditors;
 
    static std::string LastEditedClassName;
    static std::string LastEditedRaceName;
@@ -99,6 +97,7 @@ public:
    static CharacterClass EditableClass;
    static CharacterRace  EditableRace;
    static DnDCharacter   EditableCharacter;
+   
 };
 
 struct ElementStyle
@@ -154,7 +153,8 @@ struct GridElement
 typedef struct Template
 {
    std::vector<GridElement> Inner;
-   
+
+   ImVec2 MaxSize {-1, -1}; // {x,y} Negative one indicates there is no limit 
 } Template_t;
 
 namespace UI
@@ -272,28 +272,19 @@ namespace UI
       static const std::string agChaoticEvilLabel    = ("ag::Chaotic Evil");      
       
       
-      static Template LawfulAlignmentTemplates{
+      static Template AlignmentTemplates{
          {
             GridElement{agLawGoodLabel,        CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::LawGood, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
             GridElement{agLawNeutralLabel,     CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::LawNeutral, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
-            GridElement{agLawEvilLabel,        CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::LawEvil, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment}
-         }
-      };
-
-      static Template NeutralAlignmentTemplates{
-         {
+            GridElement{agLawEvilLabel,        CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::LawEvil, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
             GridElement{agNeutralGoodLabel,    CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::NeutralGood, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
             GridElement{agNeutralNeutralLabel, CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::NeutralNeutral, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
-            GridElement{agNeutralEvilLabel,    CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::NeutralEvil, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment}
-         }
-      };
-
-      static Template ChaoticAlignmentTemplates{
-         {
+            GridElement{agNeutralEvilLabel,    CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::NeutralEvil, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
             GridElement{agChaoticGoodLabel,    CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::ChaosGood, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
             GridElement{agChaoticNeutralLabel, CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::ChaosNeutral, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment},
             GridElement{agChaoticEvilLabel,    CharacterEditorStyle, INVALID_INDEX, Spec::Character::Alignment::ChaosEvil, false, true, false, DummyStateDelegate, &UIHandler::Callbacks::Character::SelectAlignment}
-         }
+         },
+         ImVec2{3 * (CharacterEditorStyle.ElementSizes.x + CharacterEditorStyle.Padding.x), 3 * (CharacterEditorStyle.ElementSizes.y + CharacterEditorStyle.Padding.y)}
       };
    }
 

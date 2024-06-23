@@ -1,88 +1,101 @@
 ﻿#ifndef JSONHELPER_H
 #define JSONHELPER_H
 
-#include <fstream>
-#include "json.hpp"
+#ifndef _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#endif
+
+#include <experimental/filesystem>
+
 #include "ruleset.h"
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CharacterClass, Name, PrimeStat, HitDieShape, ID)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CharacterRace, Name, MinimumStats, Modifiers, AbilityName, AllowedClassIDs, ID)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StatRollReturn, RollValue, ModifiedValue)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DnDCharacter, Name, Race, Class, AbilityScores, Hitpoints, Gold, Alignment, ID)
+void StartReadConfigs();
+void EndReadConfigs(const struct ConfigData& Data);
 
 namespace JHelper
 {
    namespace Class
    {
-      inline CharacterClass LoadConfig(const std::string& FileName)
-      {
-         nlohmann::json json;
-         std::ifstream filestream(FileName, std::ifstream::binary);
-         filestream >> json;
-         return json.get<CharacterClass>();
-      }
-
-      inline void SaveConfig(const CharacterClass& ClassDescr)
-      {
-         const nlohmann::json json = ClassDescr;
-         
-         // This won't be portable but works for now
-         std::string ConfigsDir = "../../rsc/savedata/classes/";
-         ConfigsDir = ConfigsDir + ClassDescr.Name + ".json";
-         
-         std::ofstream outfilestream(ConfigsDir.c_str());
-
-         outfilestream << std::setw(4) << json << '\n';
-      }
+      CharacterClass LoadConfig(const std::string& FileName);
+      void SaveConfig(const CharacterClass& ClassDescr);
    }
 
    namespace Race
    {
-      inline CharacterRace LoadConfig(const std::string& FileName)
-      {
-         nlohmann::json json;
-         std::ifstream filestream(FileName, std::ifstream::binary);
-         filestream >> json;
-         return json.get<CharacterRace>();
-      }
-       
-      inline void SaveConfig(const CharacterRace& RaceDescr)
-      {
-         const nlohmann::json json = RaceDescr;
-
-         // This won't be portable but works for now
-         std::string ConfigsDir = "../../rsc/savedata/races/";
-         ConfigsDir = ConfigsDir + RaceDescr.Name + ".json";
-         
-         std::ofstream outfilestream(ConfigsDir.c_str());
-         outfilestream << std::setw(4) << json << '\n';
-      }
+      CharacterRace LoadConfig(const std::string& FileName); 
+      void SaveConfig(const CharacterRace& RaceDescr);
    }
 
    namespace Character
    {
-      inline DnDCharacter LoadConfig(const std::string& FileName)
-      {
-         nlohmann::json json;
-         std::ifstream filestream(FileName, std::ifstream::binary);
-         filestream >> json;
-         return json.get<DnDCharacter>();
-      }
-       
-      inline void SaveConfig(const DnDCharacter& CharDescr)
-      {
-         const nlohmann::json json = CharDescr;
+      DnDCharacter LoadConfig(const std::string& FileName);
+      void SaveConfig(const DnDCharacter& CharDescr);
+   }
+}
 
-         // This won't be portable but works for now
-         std::string ConfigsDir = "../../rsc/savedata/characters/";
-         ConfigsDir = ConfigsDir + CharDescr.Name + ".json";
+template<typename TStructType>
+struct LoaderUtilityBase
+{
+   virtual ~LoaderUtilityBase() {};
+   static void Init()  { return; }
+   static std::vector<TStructType> ScanDirectory();
+};
+   
+struct ClassLoaderUtility final : LoaderUtilityBase<CharacterClass>
+{
+   static void Init() { CachedStructs = ScanDirectory();}
+   static std::vector<CharacterClass> CachedStructs;
+};
 
-         std::ofstream outfilestream(ConfigsDir.c_str());
+struct RaceLoaderUtility final : LoaderUtilityBase<CharacterRace>
+{
+   static void Init() { CachedStructs = ScanDirectory();}
+   static std::vector<CharacterRace> CachedStructs;
+};
 
-         outfilestream << std::setw(4) << json << '\n';
-      }
+struct CharacterLoaderUtility final : LoaderUtilityBase<DnDCharacter>
+{
+   static void Init() { CachedStructs = ScanDirectory();}
+   static std::vector<DnDCharacter> CachedStructs;
+};   
+
+template<>
+inline std::vector<CharacterClass> LoaderUtilityBase<CharacterClass>::ScanDirectory()
+{
+   std::vector<CharacterClass> LoadedConfigs{};
+   std::experimental::filesystem::path FinalPath = std::experimental::filesystem::current_path()  / ".."/ ".." / "rsc" / "savedata" / "classes" / "";      
+   for (const std::experimental::filesystem::directory_entry& DirEntry : std::experimental::filesystem::directory_iterator(FinalPath))
+   {
+      LoadedConfigs.emplace_back(JHelper::Class::LoadConfig(DirEntry.path().string()));
    }
 
+   return LoadedConfigs;
 }
+
+template<>
+inline std::vector<CharacterRace> LoaderUtilityBase<CharacterRace>::ScanDirectory()
+{
+   std::experimental::filesystem::path FinalPath = std::experimental::filesystem::current_path()  / ".."/ ".." / "rsc" / "savedata" / "races" / "\0";      
+   std::vector<CharacterRace> LoadedConfigs{};
+   for (const std::experimental::filesystem::directory_entry& DirEntry : std::experimental::filesystem::directory_iterator(FinalPath))
+   {
+      LoadedConfigs.emplace_back(JHelper::Race::LoadConfig(DirEntry.path().string()));
+   }
+   return LoadedConfigs;
+}
+
+template<>
+inline std::vector<DnDCharacter> LoaderUtilityBase<DnDCharacter>::ScanDirectory()
+{
+   std::experimental::filesystem::path FinalPath = std::experimental::filesystem::current_path()  / ".."/ ".." / "rsc" / "savedata" / "characters" / "\0";      
+   std::vector<DnDCharacter> LoadedConfigs{};
+   
+   for (const std::experimental::filesystem::directory_entry& DirEntry : std::experimental::filesystem::directory_iterator(FinalPath))
+   {
+      LoadedConfigs.emplace_back(JHelper::Character::LoadConfig(DirEntry.path().string()));
+   }
+   return LoadedConfigs;
+}   
+
 
 #endif // JSONHELPER_H

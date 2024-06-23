@@ -6,6 +6,7 @@
 
 
 #include "../inc/dataformat.h"
+#include "../inc/editor_core.h"
 #include "../inc/ui.h"
 
 // Data
@@ -27,6 +28,9 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void MainLoop(ImGuiIO& io)
 {
+   // Start with loading our congifs ot otehr threads
+   EditorCore::StartReadConfigs();
+   
    // states
    ImVec4 ClearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 

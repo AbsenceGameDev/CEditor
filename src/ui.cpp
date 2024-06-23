@@ -29,6 +29,8 @@ ImFont* UIHandler::GlobalLargeFont = nullptr;
 bool UIHandler::DrawClassEditor = true;
 bool UIHandler::DrawRaceEditor = true;
 bool UIHandler::DrawCharacterEditor = true;
+bool UIHandler::BlockEditors = true;
+
 
 std::string UIHandler::LastEditedClassName = "\0";
 std::string UIHandler::LastEditedRaceName = "\0";
@@ -103,9 +105,9 @@ void UIHandler::OnPaint(ImGuiIO& io, ImVec4 ClearColor)
    // Main menu bar
    UIHandler::DrawAppMainMenuBar();
 
+   if (BlockEditors) { return; }
+   
    ImGuiInputTextFlags SharedInputTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory;
-
-
    ImGui::PushFont(GlobalSmallFont);
    
    // Create a Class editor window
@@ -235,11 +237,7 @@ void UIHandler::OnPaint(ImGuiIO& io, ImVec4 ClearColor)
       // Alignment selector tree @todo Finish Alignment selection, make sure we can't slect from teh different aligment templates, or put them all in one template and wrap by 3 element
       MakeTree("{Alignment Selector - @todo Selected or rolled}",
          {
-            DrawTemplates(&UI::Character::LawfulAlignmentTemplates);
-            ImGui::NewLine();
-            DrawTemplates(&UI::Character::NeutralAlignmentTemplates);
-            ImGui::NewLine();
-            DrawTemplates(&UI::Character::ChaoticAlignmentTemplates);
+            DrawTemplates(&UI::Character::AlignmentTemplates);
          }
       )
 
@@ -366,10 +364,11 @@ void UIHandler::DrawTemplates(Template* Category)
       MousePos.x -= CursorScreenPos.x;
       MousePos.y -= CursorScreenPos.y;
 
+      
       if (Element.AllowSelection)
       {
          OutHovered = (MousePos.x > CalcPos.x && MousePos.x < CalcPos.x + SizeX && MousePos.y > CalcPos.y && MousePos.y < CalcPos.y + SizeY);
-         //---- Selection
+         //---- Visualize Selection
          if (OutHovered || Element.IsSelected)
          {
             const float OffsetX = CursorScreenPos.x + HalfPaddingX;
@@ -389,7 +388,7 @@ void UIHandler::DrawTemplates(Template* Category)
       // CreateTexture(Element);
       // ImGui::Image(Element.ImageID, ImVec2(50, 50));
 
-
+      
       std::string Name = Element.Label;
       Name = Name.substr(4, Name.length() - 4);
 
@@ -440,7 +439,10 @@ void UIHandler::DrawTemplates(Template* Category)
 
       //---- Next position
       CalcPos.x += SizeX + HalfPaddingX * 2;
-      if (CalcPos.x + SizeX > ImGui::GetWindowWidth())
+
+      const float WindowWidth = ImGui::GetWindowWidth();
+      const float MaxWidth = Category->MaxSize.x > 0 ? MinV(Category->MaxSize.x, WindowWidth) : WindowWidth;
+      if (CalcPos.x + SizeX > MaxWidth)
       {
          CalcPos.x = 0;
          CalcPos.y += SizeY + HalfPaddingY * 2;

@@ -1,6 +1,6 @@
 {
-    "HitDieShape": 8,
-    "ID": 0,
     "Name": "Bard",
-    "PrimeStat": 5
+    "ID": 0,
+    "PrimeStat": 5,
+    "HitDieShape": 8
 }
