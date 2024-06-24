@@ -134,12 +134,13 @@ void UIHandler::DrawAppMainMenuBar()
          UIHandler::SetRaceEditorOpen(Payload);
       }
 
-      const std::string CharacterSelectorLabel = UIHandler::GetCharacterSelectorStateLabel(State);
-      if (ImGui::Button(CharacterSelectorLabel.c_str()))
-      {
-         ButtonPayload Payload{DummyElement, nullptr, State == false};
-         UIHandler::SetCharacterSelectorOpen(Payload);
-      }
+      // Baked into the character editor now
+      // const std::string CharacterSelectorLabel = UIHandler::GetCharacterSelectorStateLabel(State);
+      // if (ImGui::Button(CharacterSelectorLabel.c_str()))
+      // {
+      //    ButtonPayload Payload{DummyElement, nullptr, State == false};
+      //    UIHandler::SetCharacterSelectorOpen(Payload);
+      // }
 
       ImGui::EndMainMenuBar();
    }
@@ -218,8 +219,8 @@ void UIHandler::PaintRaceEditor(ImGuiInputTextFlags SharedInputTextFlags)
       {
          // Prepass
          std::deque<const GridElement*> RemovalDeque;
-         UpdateGridElements<RaceEditor_ClassSelectors>(&UI::Race::ClassTemplates, EditorCore::MappedClasses, ClassListPrefix,
-            RemovalDeque);
+         std::set<int> Matcher;
+         UpdateGridElements<RaceEditor_ClassSelectors>(&UI::Race::ClassTemplates, EditorCore::MappedClasses, ClassListPrefix, RemovalDeque);
       }
    )
 
@@ -257,37 +258,53 @@ void UIHandler::PaintCharacterEditor(ImGuiInputTextFlags SharedInputTextFlags)
    ImGui::InputText(InputBoxLabel.c_str(), charbuf, Data::Format::NameSize, SharedInputTextFlags, &UIHandler::CallbackCharacterName);
    const std::string FinalName = "Character Name}: " + NameToString;
    ImGui::Text(FinalName.c_str());
-   ImGui::NewLine();
 
-
+   // Create a Character Selector window
+   PaintCharacterSelector();
    
-
-   // Class selector tree 
-   static const std::string ClassListPrefix = "cl::";
-#define CharEditor_ClassTypes CharacterClass, ClassTreeIt, UIHandler::Callbacks::Character::SelectClass
-   MakeTree("{Class Selector}",
-      {
-         // Prepass
-         std::deque<const GridElement*> RemovalDeque;
-         UpdateGridElements<CharEditor_ClassTypes>(&UI::Character::ClassTemplates, EditorCore::MappedClasses, ClassListPrefix, RemovalDeque);
-      }
-   )
-
    //
    // Race selector tree 
    static const std::string RaceListPrefix = "rs::";
 #define CharEditor_RaceTypes CharacterRace, RaceTreeIt, UIHandler::Callbacks::Character::SelectRace
    MakeTree("{Race Selector} : @todo Selected and/or Rolled Race",
       {
-         // Prepass
-         std::deque<const GridElement*> RemovalDeque;
+         std::deque<const GridElement*> RemovalDeque; // for Prepass @todo unneeded, remove
          UpdateGridElements<CharEditor_RaceTypes>(&UI::Character::RaceTemplates, EditorCore::MappedRaces, RaceListPrefix, RemovalDeque);
       }
    )
+
+   if (UIHandler::EditableCharacter.Race.ID == INVALID_INDEX)
+   {
+      // @todo turn into some styling construct which handles pushing and popping full style overhauls for us? 
+      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20, 20));
+      ImGui::PushStyleVar(ImGuiStyleVar_TabBorderSize, 50.f);
+      ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10, 10));      
+      ImGui::NewLine();
+      ImGui::Text("Select Race first to see possible classes");
+      ImGui::NewLine();
+      // @todo turn into some styling construct which handles pushing and popping full style overhauls for us? 
+      ImGui::PopStyleVar();
+      ImGui::PopStyleVar();
+      ImGui::PopStyleVar();
+   }
+   else
+   {
+      
+      // Class selector tree / Filter based on selected race
+      static const std::string ClassListPrefix = "cl::";
+   #define CharEditor_ClassTypes CharacterClass, ClassTreeIt, UIHandler::Callbacks::Character::SelectClass
+      MakeTree("{Class Selector}",
+         {
+            std::deque<const GridElement*> RemovalDeque; // for Prepass @todo unneeded: Remove the Removal deque (You are your worst enemy :O)
+            UpdateGridElements<CharEditor_ClassTypes>(&UI::Character::ClassTemplates, EditorCore::MappedClasses, ClassListPrefix, RemovalDeque, true, UIHandler::EditableCharacter.Race.AllowedClassIDs);
+         }
+      )
+   }
+
+   
    
    // Alignment selector tree 
    MakeTree("{Alignment Selector - @todo Selected or rolled}", { DrawTemplates(&UI::Character::AlignmentTemplates); })
-
    
    static LinkedStatCategory StatCategories{ std::vector<LinkedWidgetBase*>{}, &UI::Character::CharacterStatTemplates};
    static LinkedButton Button{{&StatCategories}}; // ::Paint();
@@ -342,31 +359,27 @@ void UIHandler::PaintCharacterSelector()
 {
    if (DrawCharacterSelector == false) { return;}
    
-   // @todo turn into some styling construct which handles pushing and popping full style overhauls for us? 
-   ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(600, 500));
-   ImGui::Begin("CEditor Character Selector", 0, ImGuiWindowFlags_NoCollapse);
-
    // Character selector tree 
-   ImGui::Text("Character Picker");
+   
    static const std::string CharacterListPrefix = "cx::";
 #define CharEditor_CharTypes DnDCharacter, CharTreeIt, UIHandler::Callbacks::CharacterPicker::SelectCharacter
    MakeTree("{Character Selector}",
       {
+         ImGui::BeginListBox("");
          // Prepass
          std::deque<const GridElement*> RemovalDeque;
-
          UpdateGridElements<CharEditor_CharTypes>(&UI::Character::LoadedCharacterTemplates, EditorCore::MappedCharacters, CharacterListPrefix, RemovalDeque);
+         ImGui::NewLine();
+         ImGui::NewLine();
+         ImGui::NewLine();
+
+         //
+         //---- Character Menu buttons
+         ImGui::NewLine();
+         DrawTemplates(&UI::Menu::CharacterSelectorControlTemplates);
+         ImGui::EndListBox();
       }
    )
-
-   //
-   //---- Character Menu buttons
-   ImGui::NewLine();
-   ImGui::NewLine();
-   DrawTemplates(&UI::Menu::CharacterSelectorControlTemplates);
-
-   ImGui::End();
-   ImGui::PopStyleVar();
 }
 
 // Editors OnPaint 
@@ -394,8 +407,9 @@ void UIHandler::OnPaint(ImGuiIO& io, ImVec4 ClearColor)
    // Create a Character editor window
    PaintCharacterEditor(SharedInputTextFlags);
 
-   // Create a Character Selector window
-   PaintCharacterSelector();
+   // Moved into Character Editor
+   // // Create a Character Selector window
+   // PaintCharacterSelector();
 
 
    ImGui::PopFont();
@@ -429,8 +443,8 @@ void UIHandler::SaveClass(ButtonPayload& Payload)
 {
    if (EditableClass.Name != LastEditedClassName)
    {
-      EditorCore::CreateClass(UIHandler::EditableClass);
       EditableClass.NewID();
+      EditorCore::CreateClass(UIHandler::EditableClass);
 
       LastEditedClassName = EditableClass.Name;
    }
@@ -440,8 +454,8 @@ void UIHandler::SaveRace(ButtonPayload& Payload)
 {
    if (EditableRace.Name != LastEditedRaceName)
    {
-      EditorCore::CreateRace(UIHandler::EditableRace);
       EditableRace.NewID();
+      EditorCore::CreateRace(UIHandler::EditableRace);
 
       LastEditedRaceName = EditableRace.Name;
    }
@@ -479,21 +493,42 @@ void UIHandler::UpdateGridElements(
    Template* Group,
    std::map<int, TType>& MappedGroup,
    std::string FourCharacterPrefix,
-   std::deque<const GridElement*> RemovalDeque)
+   std::deque<const GridElement*> RemovalDeque,
+   bool ShouldFilter,
+   int AllowedClassIDs[MAX_ALLOWED_CLASSES])
 {
+   const bool AllowAll = AllowedClassIDs[0] == INVALID_INDEX;
+   ShouldFilter &= AllowAll == false;
+
+   int TargetIdx = 0;
    for (const std::pair<const int, TType>& ClassPair : MappedGroup)
    {
-      UIHandler::RequestNewTemplateEntryForDataWithID<TType, TCallbackSpace>(Group, FourCharacterPrefix, ClassPair.second);
+      // SLow filter, lucky we cap out
+      if (ShouldFilter)
+      {
+         bool FoundMatch = false;
+         for (int Step = 0; Step < MAX_ALLOWED_CLASSES; Step++)
+         {
+            FoundMatch = AllowedClassIDs[Step] == ClassPair.first;
+            if (FoundMatch) { break; }
+         }
+
+         if (FoundMatch == false) { continue; }
+         
+      }
+
+      UIHandler::RequestNewTemplateEntryForDataWithID<TType, TCallbackSpace>(Group, FourCharacterPrefix, ClassPair.second, TargetIdx);
+      ++TargetIdx;
    }
    DrawTemplates(Group);
 }
 
 
 template <class TType = CharacterClass, CallbackSpace TCallbackSpace = &UIHandler::Callbacks::Race::SelectAllowedClass>
-void UIHandler::RequestNewTemplateEntryForDataWithID(Template* TGroup, std::string FourCharacterPrefix, const TType& ClassData)
+void UIHandler::RequestNewTemplateEntryForDataWithID(Template* TGroup, std::string FourCharacterPrefix, const TType& ClassData, int Override)
 {
    const std::string NameAsString = FourCharacterPrefix + ClassData.Name;
-   const GridElement PotentiallyNewElement = GridElement(NameAsString, UI::CharacterEditorStyle, ClassData.ID, INVALID_INDEX, false, true,
+   const GridElement PotentiallyNewElement = GridElement(NameAsString, UI::CharacterEditorStyle, ClassData.ID, Override, false, true,
                                                          false, DummyStateDelegate, TCallbackSpace, DummyCallbackTarget);
 
    const bool DidElementExist = TGroup->DoesGridElementExist(PotentiallyNewElement);
@@ -846,15 +881,16 @@ void UIHandler::Callbacks::Race::SelectAllowedClass(ButtonPayload& Payload)
    SelectInclusive(Payload);
 
 
+   int SelectorValue = Payload.CallingVisualElement->EnumSelectorValue;
+   if (SelectorValue == INVALID_INDEX) { return; }
+
    if (Payload.CallingVisualElement->IsSelected)
    {
-      Spec::Character::StatType StatType = static_cast<Spec::Character::StatType>(Payload.CallingVisualElement->EnumSelectorValue);
-      UIHandler::EditableRace.AllowedClassIDs[StatType] = Payload.CallingVisualElement->CurrentValue;
+      UIHandler::EditableRace.AllowedClassIDs[SelectorValue] = Payload.CallingVisualElement->CurrentValue;
    }
    else
    {
-      Spec::Character::StatType StatType = static_cast<Spec::Character::StatType>(Payload.CallingVisualElement->EnumSelectorValue);
-      UIHandler::EditableRace.AllowedClassIDs[StatType] = 0;
+      UIHandler::EditableRace.AllowedClassIDs[SelectorValue] = 0;
    }
 }
 

@@ -18,6 +18,8 @@
 using TemplateElementKeyIt = std::_Tree_iterator<std::_Tree_val<std::_Tree_simple_types<std::pair<struct Template* const, struct GridElement*>>>>&&;
 using TemplateElementValueIt  = std::_Tree_iterator<std::_Tree_val<std::_Tree_simple_types<std::pair<struct GridElement* const,  struct Template*>>>>&&;
 
+static int Dummy[MAX_ALLOWED_CLASSES] = {INVALID_INDEX};
+
 namespace Settings
 {
    enum GridElement
@@ -299,7 +301,7 @@ public:
    static void LoadCharacter(ButtonPayload& ButtonPayload);
 
    template<class TType = CharacterClass, CallbackSpace TCallbackSpace = Callbacks::Race::SelectAllowedClass>
-   static void RequestNewTemplateEntryForDataWithID(Template* TGroup, std::string FourCharacterPrefix, const TType& ClassData);
+   static void RequestNewTemplateEntryForDataWithID(Template* TGroup, std::string FourCharacterPrefix, const TType& ClassData, int Override = INVALID_INDEX); // @todo rethinking all of this, come back to it tomorrow
    static void RemoveGridElement(const GridElement* Consider, Template* TGroup);
 
    template<class TType = CharacterClass, class IteratorType, 
@@ -308,7 +310,9 @@ public:
       Template* Group,
       std::map<int, TType>& MappedGroup,
       std::string FourCharacterPrefix,
-      std::deque<const GridElement*> RemovalDeque);
+      std::deque<const GridElement*> RemovalDeque,
+      bool ShouldFilter = false,
+      int AllowedClassIDs[MAX_ALLOWED_CLASSES] = Dummy);
    
    static void SetClassEditorOpen(ButtonPayload& Payload)         { DrawClassEditor       = Payload.SetOpen; }
    static void SetRaceEditorOpen(ButtonPayload& Payload)          { DrawRaceEditor        = Payload.SetOpen; }

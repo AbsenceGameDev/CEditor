@@ -25,14 +25,8 @@ EditorCore::~EditorCore()
 void EditorCore::CreateCharacter(const DnDCharacter& Character, bool Save)
 {
    CharTreeIt it = MappedCharacters.find(Character.ID);
-   if (it == MappedCharacters.end())
-   {
-      MappedCharacters.emplace(Character.ID, Character);
-   }
-   else
-   {
-      MappedCharacters[Character.ID] = Character;
-   }
+   if (it == MappedCharacters.end()) { MappedCharacters.emplace(Character.ID, Character); }
+   else { MappedCharacters[Character.ID] = Character; }
    
    if (Save == false) { return; }
    JHelper::Character::SaveConfig(Character);
@@ -40,14 +34,8 @@ void EditorCore::CreateCharacter(const DnDCharacter& Character, bool Save)
 void EditorCore::CreateClass(const CharacterClass& Class, bool Save)
 {
    ClassTreeIt it = MappedClasses.find(Class.ID);
-   if (it == MappedClasses.end())
-   {
-      MappedClasses.emplace(Class.ID, Class);   
-   }
-   else
-   {
-      MappedClasses[Class.ID] = Class;
-   }
+   if (it == MappedClasses.end()) { MappedClasses.emplace(Class.ID, Class); }
+   else { MappedClasses[Class.ID] = Class; }
    
    if (Save == false) { return; }
    JHelper::Class::SaveConfig(Class);
@@ -55,14 +43,8 @@ void EditorCore::CreateClass(const CharacterClass& Class, bool Save)
 void EditorCore::CreateRace(const CharacterRace& Race, bool Save)
 {
    RaceTreeIt it = MappedRaces.find(Race.ID);
-   if (it == MappedRaces.end())
-   {
-      MappedRaces.emplace(Race.ID, Race);   
-   }
-   else
-   {
-      MappedRaces[Race.ID] = Race;
-   }
+   if (it == MappedRaces.end()) { MappedRaces.emplace(Race.ID, Race); }
+   else { MappedRaces[Race.ID] = Race; }
 
    if (Save == false) { return; }
    JHelper::Race::SaveConfig(Race); // save to file
@@ -141,16 +123,19 @@ void EditorCore::EndReadConfigs(const ConfigData& Data)
 {
    for (const DnDCharacter& Character : Data.Characters)
    {
+      IncrementalID+=10;
       EditorCore::CreateCharacter(Character, false);
    }
 
    for (const CharacterClass& Class : Data.Classes)
    {
+      IncrementalCID+=10;
       EditorCore::CreateClass(Class, false);
    }
 
    for (const CharacterRace& Race : Data.Races)
    {
+      IncrementalRID+=10; 
       EditorCore::CreateRace(Race, false);
    }
    UIHandler::BlockEditors = false;

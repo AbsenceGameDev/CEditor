@@ -208,18 +208,24 @@ typedef struct BaseCharacterEditorClass
    
 };
 
-static int IncrementalCID = 0;
+static int IncrementalCID = 0; // @todo remove from being a global, had not time to think on this before
 
 struct CharacterClass : public BaseCharacterEditorClass
 {
    CharacterClass(): Name{}, PrimeStat(), _HitDice(Platonic::Dice::E4D, -1)
    {
    }
-   
+
    CharacterClass(const CharacterClass& Other, int Seed = DEFAULT_START_STATE)
       : PrimeStat(Other.PrimeStat), HitDieShape(Other.HitDieShape), _HitDice(Other.HitDieShape, Seed)
    {
       PoorMansStringCopy(Name, Other.Name);
+
+      if (Other.ID != INVALID_INDEX)
+      {
+         ID = Other.ID;
+         return;
+      }
       NewID();
    }
 
@@ -228,6 +234,18 @@ struct CharacterClass : public BaseCharacterEditorClass
    {
       PoorMansStringCopy(Name, InName);
       NewID();
+   }
+
+   CharacterClass& operator=(CharacterClass const& Other)
+   {
+      PoorMansStringCopy(this->Name, Other.Name);
+
+      this->ID = Other.ID;
+      this->PrimeStat = Other.PrimeStat;
+      this->HitDieShape = Other.HitDieShape;
+      
+      return *this;
+      
    }
 
    void NewID() { ID = IncrementalCID++ % MAX_ID; }
@@ -255,7 +273,41 @@ static int IncrementalRID = 0;
 struct CharacterRace : public BaseCharacterEditorClass
 {
    CharacterRace(): Name{"Default\0"}, AbilityName{"Default\0"} { }
+   
+   CharacterRace(const CharacterRace& Other)
+   {
+      PoorMansStringCopy(this->Name, Other.Name);
+      PoorMansStringCopy(this->AbilityName, Other.AbilityName);
+      if (Other.ID != INVALID_INDEX)
+      {
+         this->ID = Other.ID;
+         return;
+      }
+      
+      NewID();
+   }
 
+   CharacterRace& operator=(CharacterRace const& Other)
+   {
+      PoorMansStringCopy(this->Name, Other.Name);
+      PoorMansStringCopy(AbilityName, Other.AbilityName);
+
+      this->ID = Other.ID;
+      for (int Step = 0; Step < 6; Step++)
+      {
+         this->Modifiers[Step] = Other.Modifiers[Step];
+         this->MinimumStats[Step] = Other.MinimumStats[Step];
+      }
+
+      for (int Step = 0; Step < 20; Step++)
+      {
+         this->AllowedClassIDs[Step] = Other.AllowedClassIDs[Step];
+      }      
+      
+      return *this;
+      
+   }
+   
 private:
    CharacterRace(const GenericName& InName, const GenericName& InRaceAbilityName)
    {
@@ -274,7 +326,7 @@ private:
    }
 
 public:
-   void NewID() { ID = IncrementalRID++ % MAX_ID; }
+   void NewID() { ID = ++IncrementalRID % MAX_ID; }
 
    static CharacterRace ConstructOnStack() { return CharacterRace{}; }
 
