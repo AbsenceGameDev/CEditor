@@ -18,6 +18,75 @@
 using TemplateElementKeyIt = std::_Tree_iterator<std::_Tree_val<std::_Tree_simple_types<std::pair<struct Template* const, struct GridElement*>>>>&&;
 using TemplateElementValueIt  = std::_Tree_iterator<std::_Tree_val<std::_Tree_simple_types<std::pair<struct GridElement* const,  struct Template*>>>>&&;
 
+namespace Settings
+{
+   enum GridElement
+   {
+      AllowSelection      = 0b0001,
+      AllowNegativeValues = 0b0010,
+      DisplayValue        = 0b0100,
+         
+      NOT_SET = 0b0111000
+   };
+   
+}
+
+namespace Override
+{
+   namespace Behaviour
+   {
+      using Category = Settings::GridElement;
+      
+      template<Override::Behaviour::Category CompareBit>
+      inline bool IsOverriddenBehaviour(int Flags) { return false; };
+
+      template<Override::Behaviour::Category CompareBit>
+      inline bool GetOverriddenState(int Flags) { return false; };      
+      
+      template<Override::Behaviour::Category SetBit, bool TSetTrue>
+      inline int OverrideBehaviour(int Flags) { return Flags; };
+
+      template<Override::Behaviour::Category SetBit>
+      inline int ResetOverrideState(int Flags) { return Flags; };            
+   };
+}
+
+template<> inline bool Override::Behaviour::IsOverriddenBehaviour <Override::Behaviour::Category::AllowSelection>(int Flags)
+{ return (Flags & 0b00010000) == 0; };
+template<> inline bool Override::Behaviour::IsOverriddenBehaviour<Override::Behaviour::Category::AllowNegativeValues>(int Flags)
+{ return (Flags & 0b00100000) == 0; };
+template<> inline bool Override::Behaviour::IsOverriddenBehaviour<Override::Behaviour::Category::DisplayValue>(int Flags)
+{ return (Flags & 0b01000000) == 0; };
+
+template<> inline bool Override::Behaviour::GetOverriddenState<Override::Behaviour::Category::AllowSelection>(int Flags)
+{ return (Flags & Override::Behaviour::Category::AllowSelection) > 0; };
+template<> inline bool Override::Behaviour::GetOverriddenState<Override::Behaviour::Category::AllowNegativeValues>(int Flags)
+{ return (Flags & Override::Behaviour::Category::AllowNegativeValues) > 0; };
+template<> inline bool Override::Behaviour::GetOverriddenState<Override::Behaviour::Category::DisplayValue>(int Flags)
+{ return (Flags & Override::Behaviour::Category::DisplayValue) > 0; };
+
+template<> inline int Override::Behaviour::OverrideBehaviour<Override::Behaviour::Category::AllowSelection, true>(int Flags)
+{ return  ((Flags & 0b11101111) | Category::AllowSelection); };
+template<> inline int Override::Behaviour::OverrideBehaviour<Override::Behaviour::Category::AllowNegativeValues, true>(int Flags)
+{ return  ((Flags & 0b11011111) | Category::AllowNegativeValues) ; };
+template<> inline int Override::Behaviour::OverrideBehaviour<Override::Behaviour::Category::DisplayValue, true>(int Flags)
+{ return  ((Flags & 0b10111111) | Category::DisplayValue); };   
+template<> inline int Override::Behaviour::OverrideBehaviour <Override::Behaviour::Category::AllowSelection, false>(int Flags)
+{ return  (Flags & 0b11101110) ; };
+template<> inline int Override::Behaviour::OverrideBehaviour<Override::Behaviour::Category::AllowNegativeValues, false>(int Flags)
+{ return  ((Flags & 0b11011101)) ; };
+template<> inline int Override::Behaviour::OverrideBehaviour <Override::Behaviour::Category::DisplayValue, false>(int Flags)
+{ return  ((Flags & 0b10111011)) ;};   
+
+template<> inline int Override::Behaviour::ResetOverrideState<Override::Behaviour::Category::AllowSelection>(int Flags)
+{ return  (Flags & 0b11101111) ;}
+template<> inline int Override::Behaviour::ResetOverrideState<Override::Behaviour::Category::AllowNegativeValues>(int Flags)
+{ return  (Flags & 0b11011111) ; };
+template<> inline int Override::Behaviour::ResetOverrideState<Override::Behaviour::Category::DisplayValue>(int Flags)
+{ return  (Flags & 0b10111111) ;};   
+
+
+
 // fwd decl.
 struct Template;
 
@@ -37,6 +106,124 @@ struct ButtonPayload
 auto DummyStateDelegate = [](const struct ButtonPayload&) -> bool { return false; };
 auto DummyCallbackTarget = [](const struct ButtonPayload&) -> void { };
 typedef void (*CallbackSpace)(struct ButtonPayload&) ; //= UIHandler::Callbacks::Race::SelectAllowedClass;
+
+typedef struct LinkedWidgetBase
+{
+   LinkedWidgetBase() = default;
+   LinkedWidgetBase(std::vector<LinkedWidgetBase*> WidgetList)
+   {
+      for (LinkedWidgetBase* LinkedBase : WidgetList)
+      {
+         LinkWidget(LinkedBase);
+      }
+   }
+   virtual ~LinkedWidgetBase() = default;
+
+   void LinkWidget(LinkedWidgetBase* NewWidget)
+   {
+      if (NewWidget == nullptr || LinkedWidgets.find(NewWidget) != LinkedWidgets.end()) { return; }
+
+      LinkedWidgets.emplace(NewWidget, NewWidget->IsVisible);
+   }
+   void RemoveLinkedWidget(LinkedWidgetBase* ToRemoveWidget)
+   {
+      if (ToRemoveWidget == nullptr || LinkedWidgets.find(ToRemoveWidget) == LinkedWidgets.end()) { return; }
+
+      LinkedWidgets.erase(ToRemoveWidget);
+   }
+
+   virtual void PropagateVisibility(bool FlipSelfBefore = false) final
+   {
+      IsVisible = FlipSelfBefore ? IsVisible == false : IsVisible;
+      
+      for (std::pair<LinkedWidgetBase* const, bool> WidgetPair : LinkedWidgets)
+      {
+         WidgetPair.second = IsVisible;
+         WidgetPair.first->IsVisible = IsVisible;
+      }
+   }
+
+   void PropagateState(bool FlipSelfBefore = false)
+   {
+      AltState = FlipSelfBefore ? AltState == false : AltState;
+      
+      for (const std::pair<LinkedWidgetBase* const, bool> WidgetPair : LinkedWidgets)
+      {
+         const bool OldState = WidgetPair.first->AltState;
+         WidgetPair.first->AltState = AltState ;
+         WidgetPair.first->OnStateUpdate(OldState);
+      }
+   }
+
+   virtual void OnStateUpdate(bool OldState) = 0;
+
+   static void Paint(LinkedWidgetBase* OptionalBase = nullptr)
+   {
+      static LinkedWidgetBase* WidgetBase = OptionalBase;
+      WidgetBase = OptionalBase != nullptr ? OptionalBase : WidgetBase;
+
+      if (WidgetBase == nullptr) { return;}
+      (*WidgetBase)();
+   }
+   
+   virtual void operator()(...) {};
+ 
+   // This macro allows us to override and overload at the same time in subclasses in a portable and legal manner
+#define SCOPED_USE_LINKEDWIDGET_NAMESPACE \
+using LinkedWidgetBase::operator(); \
+using LinkedWidgetBase::LinkedWidgetBase;
+
+
+   // This macro allows us to override and overload at the same time in subclasses in a portable and legal manner
+#define SCOPED_USE_MAKE_NOT_ABSTRACT \
+void operator()(...) final {};
+   
+public:
+
+   bool IsVisible = true;
+   bool AltState = true;
+protected:
+   std::map<LinkedWidgetBase*, bool> LinkedWidgets;
+} linked_widget_base_t;
+
+typedef struct LinkedButton final : public LinkedWidgetBase
+{
+   SCOPED_USE_LINKEDWIDGET_NAMESPACE
+   SCOPED_USE_MAKE_NOT_ABSTRACT
+   
+   virtual void operator()(const char* Label, const ImVec2& Size, ...) final
+   {
+      if (IsVisible == false) { return; } 
+
+      if (ImGui::Button(Label, Size))
+      {
+         AltState = AltState == false; // flip
+         PropagateState();
+      }
+   }
+
+   virtual void OnStateUpdate(bool OldState) {}
+   
+} linked_button_t;
+
+struct LinkedText final : public LinkedWidgetBase
+{
+   SCOPED_USE_LINKEDWIDGET_NAMESPACE
+   SCOPED_USE_MAKE_NOT_ABSTRACT
+   
+   virtual void operator()(const char* fmt, ...) final
+   {
+      if (IsVisible == false) { return; }
+      
+      int result;
+      va_list list{};
+      va_start(list, fmt);
+      ImGui::TextV(fmt, list);
+      printf("\n");
+      va_end(list);
+   }
+   virtual void OnStateUpdate(bool OldState) {}
+};
 
 class UIHandler
 {
@@ -65,6 +252,7 @@ public:
          static void SelectClass(ButtonPayload& ButtonPayload);
          static void SelectAlignment(ButtonPayload& ButtonPayload);
          static void UpdateStatsEntry(ButtonPayload& ButtonPayload);
+         static void SelectStat(ButtonPayload& ButtonPayload);
       }character_t;
 
       typedef struct CharacterPicker
@@ -268,10 +456,13 @@ typedef struct Template
       Inner.erase(Consider);
    }
 
+   
    std::set<GridElement> Inner;
 
    ImVec2 MaxSize {-1, -1}; // {x,y} Negative one indicates there is no limit 
+   int SharedSettingsFlags = 0b01110000;
 } Template_t;
+
 
 namespace UI
 {
@@ -380,12 +571,12 @@ namespace UI
       static const std::string chChaLabel = ("ch::CHA");      
       static Template CharacterStatTemplates{
          {
-            GridElement{chStrLabel, DefaultStyle, 0, Spec::Character::StatType::Strength, true, false, true, DummyStateDelegate,DummyCallbackTarget, &UIHandler::Callbacks::Character::UpdateStatsEntry},
-            GridElement{chIntLabel, DefaultStyle, 0, Spec::Character::StatType::Intelligence, true, false, true, DummyStateDelegate,DummyCallbackTarget, &UIHandler::Callbacks::Character::UpdateStatsEntry},
-            GridElement{chWisLabel, DefaultStyle, 0, Spec::Character::StatType::Wisdom, true, false, true, DummyStateDelegate,DummyCallbackTarget, &UIHandler::Callbacks::Character::UpdateStatsEntry},
-            GridElement{chDexLabel, DefaultStyle, 0, Spec::Character::StatType::Dexterity, true, false, true, DummyStateDelegate,DummyCallbackTarget, &UIHandler::Callbacks::Character::UpdateStatsEntry},
-            GridElement{chConLabel, DefaultStyle, 0, Spec::Character::StatType::Constitution, true, false, true, DummyStateDelegate,DummyCallbackTarget, &UIHandler::Callbacks::Character::UpdateStatsEntry},
-            GridElement{chChaLabel, DefaultStyle, 0, Spec::Character::StatType::Charisma, true, false, true, DummyStateDelegate,DummyCallbackTarget, &UIHandler::Callbacks::Character::UpdateStatsEntry}
+            GridElement{chStrLabel, DefaultStyle, 0, Spec::Character::StatType::Strength, true, false, true, DummyStateDelegate,&UIHandler::Callbacks::Character::SelectStat, &UIHandler::Callbacks::Character::UpdateStatsEntry},
+            GridElement{chIntLabel, DefaultStyle, 0, Spec::Character::StatType::Intelligence, true, false, true, DummyStateDelegate,&UIHandler::Callbacks::Character::SelectStat, &UIHandler::Callbacks::Character::UpdateStatsEntry},
+            GridElement{chWisLabel, DefaultStyle, 0, Spec::Character::StatType::Wisdom, true, false, true, DummyStateDelegate,&UIHandler::Callbacks::Character::SelectStat, &UIHandler::Callbacks::Character::UpdateStatsEntry},
+            GridElement{chDexLabel, DefaultStyle, 0, Spec::Character::StatType::Dexterity, true, false, true, DummyStateDelegate,&UIHandler::Callbacks::Character::SelectStat, &UIHandler::Callbacks::Character::UpdateStatsEntry},
+            GridElement{chConLabel, DefaultStyle, 0, Spec::Character::StatType::Constitution, true, false, true, DummyStateDelegate,&UIHandler::Callbacks::Character::SelectStat, &UIHandler::Callbacks::Character::UpdateStatsEntry},
+            GridElement{chChaLabel, DefaultStyle, 0, Spec::Character::StatType::Charisma, true, false, true, DummyStateDelegate,&UIHandler::Callbacks::Character::SelectStat, &UIHandler::Callbacks::Character::UpdateStatsEntry}
          }
       };
       
@@ -466,5 +657,34 @@ namespace UI
       
    }
 }
+
+struct LinkedStatCategory : public LinkedWidgetBase
+{
+   SCOPED_USE_LINKEDWIDGET_NAMESPACE
+   SCOPED_USE_MAKE_NOT_ABSTRACT
+
+   LinkedStatCategory(std::vector<LinkedWidgetBase*> Widgets, Template* Inner)
+      : linked_widget_base_t(Widgets)
+   {
+      LinkInner(Inner);
+   }
+   
+   virtual void operator()() final
+   {
+      UIHandler::DrawTemplates(InnerTemplate);
+   }
+   virtual void OnStateUpdate(bool OldState) final
+   {
+      InnerTemplate->SharedSettingsFlags = 
+      AltState == false
+         ? Override::Behaviour::OverrideBehaviour<Override::Behaviour::Category::AllowSelection, true>(InnerTemplate->SharedSettingsFlags)
+         : Override::Behaviour::OverrideBehaviour<Override::Behaviour::Category::AllowSelection, false>(InnerTemplate->SharedSettingsFlags);
+   }
+
+   void LinkInner(Template* NewInner) { InnerTemplate = NewInner;}
+   
+   struct Template* InnerTemplate = nullptr;
+};
+
 
 #endif // UI_H

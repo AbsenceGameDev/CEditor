@@ -259,6 +259,9 @@ void UIHandler::PaintCharacterEditor(ImGuiInputTextFlags SharedInputTextFlags)
    ImGui::Text(FinalName.c_str());
    ImGui::NewLine();
 
+
+   
+
    // Class selector tree 
    static const std::string ClassListPrefix = "cl::";
 #define CharEditor_ClassTypes CharacterClass, ClassTreeIt, UIHandler::Callbacks::Character::SelectClass
@@ -281,12 +284,33 @@ void UIHandler::PaintCharacterEditor(ImGuiInputTextFlags SharedInputTextFlags)
          UpdateGridElements<CharEditor_RaceTypes>(&UI::Character::RaceTemplates, EditorCore::MappedRaces, RaceListPrefix, RemovalDeque);
       }
    )
-
-   UI::Character::AlignmentTemplates;
-   // Alignment selector tree @todo Finish Alignment selection, make sure we can't slect from teh different aligment templates, or put them all in one template and wrap by 3 element
+   
+   // Alignment selector tree 
    MakeTree("{Alignment Selector - @todo Selected or rolled}", { DrawTemplates(&UI::Character::AlignmentTemplates); })
 
-   MakeTree("{Current Stats}", { DrawTemplates(&UI::Character::CharacterStatTemplates); })
+   
+   static LinkedStatCategory StatCategories{ std::vector<LinkedWidgetBase*>{}, &UI::Character::CharacterStatTemplates};
+   static LinkedButton Button{{&StatCategories}}; // ::Paint();
+
+   // @todo move out of lambda
+   auto ButtonConstructs =
+      [&]()
+      {
+         if (ImGui::Button("Re-roll Stats"))
+         {
+            // todo
+            UIHandler::EditableCharacter.RerollStats(static_cast<int>(ImGui::GetTime() * 100.f));
+         }
+         ImGui::SameLine(0, 50.0);         
+         Button(Button.AltState ? "Unlock Stats" : "Lock Stats", ImVec2(0, 0));
+      };
+   
+   MakeTree("{Current Stats}",
+      {
+         
+         ButtonConstructs();
+         DrawTemplates(&UI::Character::CharacterStatTemplates);
+      })
 
 
    // @todo Display calculated hitpoints, have a roll button that rolls our abilities and our hitpoint
@@ -558,8 +582,21 @@ void UIHandler::DrawTemplates(Template* Category)
       MousePos.x -= CursorScreenPos.x;
       MousePos.y -= CursorScreenPos.y;
 
+      
+      const bool AllowSelectionWasOverridden = Override::Behaviour::IsOverriddenBehaviour<Override::Behaviour::Category::AllowSelection>(Category->SharedSettingsFlags);
+      const bool AllowSelectionOverrideState = Override::Behaviour::GetOverriddenState<Override::Behaviour::Category::AllowSelection>(Category->SharedSettingsFlags);
+      const bool AllowSelection = AllowSelectionWasOverridden ? AllowSelectionOverrideState : MutableElement.AllowSelection;
+      
+      //
+      // const bool AllowNegativeValuesWasOverridden = Override::Behaviour::IsOverriddenBehaviour<Override::Behaviour::Category::AllowNegativeValues>(Category->SharedSettings);
+      // const bool AllowNegativeValuesOverrideState = Override::Behaviour::GetOverriddenState<Override::Behaviour::Category::AllowNegativeValues>(Category->SharedSettings);
+      // bool AllowNegativeValues = AllowSelectionWasOverridden ? AllowSelectionOverrideState : MutableElement.AllowNegativeValues;      
 
-      if (MutableElement.AllowSelection)
+      const bool DisplayValueWasOverridden = Override::Behaviour::IsOverriddenBehaviour<Override::Behaviour::Category::DisplayValue>(Category->SharedSettingsFlags);
+      const bool DisplayValueOverrideState = Override::Behaviour::GetOverriddenState<Override::Behaviour::Category::DisplayValue>(Category->SharedSettingsFlags);
+      const bool DisplayValue = DisplayValueWasOverridden ? DisplayValueOverrideState : MutableElement.DisplayValue;            
+
+      if (AllowSelection)
       {
          OutHovered = (MousePos.x > CalcPos.x && MousePos.x < CalcPos.x + SizeX && MousePos.y > CalcPos.y && MousePos.y < CalcPos.y +
             SizeY);
@@ -587,7 +624,7 @@ void UIHandler::DrawTemplates(Template* Category)
       std::string Name = MutableElement.Label;
       Name = Name.substr(4, Name.length() - 4);
 
-      if (MutableElement.AllowSelection)
+      if (AllowSelection)
       {
          const bool DidPressButton = ImGui::Button(Name.c_str(), Style.ElementSizes);
          if (DidPressButton)
@@ -596,7 +633,7 @@ void UIHandler::DrawTemplates(Template* Category)
          }
 
          // Check if mouse button is still active and if this is an element with a visible value, ignore those with INVALID_INDEX, they are not meant to have values
-         if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left) && MutableElement.DisplayValue)
+         if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left) && DisplayValue)
          {
             const float YAcc = -ImGui::GetIO().MouseDelta.y / 2;
             MutableElement.CurrentValue = ClampData(MutableElement.CurrentValue + static_cast<int>(YAcc),
@@ -630,7 +667,7 @@ void UIHandler::DrawTemplates(Template* Category)
       ImGui::SetCursorPosY(CalcPos.y + Origin.y + SizeY);
       ImGui::PushFont(GlobalSmallFont);
 
-      if (MutableElement.DisplayValue)
+      if (DisplayValue)
       {
          ImGui::Text("%02d", MutableElement.CurrentValue);
       }
@@ -879,6 +916,12 @@ void UIHandler::Callbacks::Character::UpdateStatsEntry(ButtonPayload& ButtonPayl
    const Spec::Character::StatType StatSelector =  static_cast<Spec::Character::StatType>(Widget->EnumSelectorValue);
 
    Widget->CurrentValue = UIHandler::EditableCharacter.AbilityScores[StatSelector].ModifiedValue;
+}
+
+void UIHandler::Callbacks::Character::SelectStat(ButtonPayload& ButtonPayload)
+{
+   SelectExclusive(ButtonPayload);
+
 }
 
 //

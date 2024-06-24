@@ -408,7 +408,20 @@ public:
       Gold = Roller.RollAddAndMultiply(StartingGoldFactor); // 3d6 * StartingGoldFactor : defaults to 3d6 * 10
 
       Hitpoints = RecalculateHitPoints();
-   }   
+   }
+
+   void RerollStats(int Seed)
+   {
+      // Roll stats
+      DRoller3d6 Roller(Seed);
+
+      Spec::Character::StatType Step = Spec::Character::StatType::Strength;
+      for (; Step <= Spec::Character::StatType::Charisma;)
+      {
+         AbilityScores[Step] = RollStat(Roller, Step);
+         Step = static_cast<Spec::Character::StatType>(Step + 1);
+      }      
+   }
 
    /** @brief Character Name. */
    GenericName Name; // @todo
