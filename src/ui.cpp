@@ -242,7 +242,7 @@ void UIHandler::PaintRaceEditor(ImGuiInputTextFlags SharedInputTextFlags)
 
 void UIHandler::PaintCharacterEditor(ImGuiInputTextFlags SharedInputTextFlags)
 {
-   if (DrawCharacterEditor == false) { }
+   if (DrawCharacterEditor == false) { return; }
    
    // @todo turn into some styling construct which handles pushing and popping full style overhauls for us? 
    ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(600, 500));
@@ -282,6 +282,7 @@ void UIHandler::PaintCharacterEditor(ImGuiInputTextFlags SharedInputTextFlags)
       }
    )
 
+   UI::Character::AlignmentTemplates;
    // Alignment selector tree @todo Finish Alignment selection, make sure we can't slect from teh different aligment templates, or put them all in one template and wrap by 3 element
    MakeTree("{Alignment Selector - @todo Selected or rolled}", { DrawTemplates(&UI::Character::AlignmentTemplates); })
 
@@ -301,7 +302,7 @@ void UIHandler::PaintCharacterEditor(ImGuiInputTextFlags SharedInputTextFlags)
    ImGui::NewLine();
    if (ImGui::Button("{Roll Character Die}"))
    {
-      EditableCharacter.RollHPAndGold(10, EditableCharacter.CachedSeed);
+      EditableCharacter.RollHPAndGold(10, static_cast<int>(ImGui::GetTime()));
    }
 
    //---- Character Menu buttons
@@ -469,7 +470,7 @@ void UIHandler::RequestNewTemplateEntryForDataWithID(Template* TGroup, std::stri
 {
    const std::string NameAsString = FourCharacterPrefix + ClassData.Name;
    const GridElement PotentiallyNewElement = GridElement(NameAsString, UI::CharacterEditorStyle, ClassData.ID, INVALID_INDEX, false, true,
-                                                         false, DummyStateDelegate, TCallbackSpace);
+                                                         false, DummyStateDelegate, TCallbackSpace, DummyCallbackTarget);
 
    const bool DidElementExist = TGroup->DoesGridElementExist(PotentiallyNewElement);
    if (DidElementExist == false)
@@ -620,6 +621,10 @@ void UIHandler::DrawTemplates(Template* Category)
          CalcPos.y -= OffsetY;
       }
 
+      ButtonPayload Payload = {MutableElement};
+      MutableElement.OnRefresh(Payload);
+
+      
       //---- Text
       ImGui::SetCursorPosX(CalcPos.x + Origin.x + HalfPaddingX);
       ImGui::SetCursorPosY(CalcPos.y + Origin.y + SizeY);
@@ -866,6 +871,14 @@ void UIHandler::Callbacks::Character::SelectAlignment(ButtonPayload& Payload)
    {
       UIHandler::EditableCharacter.Alignment = Spec::Character::NeutralNeutral;
    }
+}
+
+void UIHandler::Callbacks::Character::UpdateStatsEntry(ButtonPayload& ButtonPayload)
+{
+   GridElement* Widget = ButtonPayload.CallingVisualElement;
+   const Spec::Character::StatType StatSelector =  static_cast<Spec::Character::StatType>(Widget->EnumSelectorValue);
+
+   Widget->CurrentValue = UIHandler::EditableCharacter.AbilityScores[StatSelector].ModifiedValue;
 }
 
 //
