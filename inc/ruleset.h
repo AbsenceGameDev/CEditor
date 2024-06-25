@@ -59,6 +59,7 @@ static constexpr TType ClampData(const TType inValue, const TType minValue, cons
 namespace Platonic
 {
    enum Dice : char { E4D = 4, E6D = 6, E8D = 8, E12D = 12, E20D = 20 };
+   enum class DiceIdx : char { E4D = 0, E6D, E8D, E12D, E20D, EMax};
 }
 
 constexpr int PLATONIC_SOLIDS[5] = {

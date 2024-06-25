@@ -1,7 +1,7 @@
 #include "../inc/editor_core.h"
 
 #include "../inc/jsonhelper.h"
-#include "../inc/ui.h"
+#include "../inc/ui/handler.h"
 
 std::map<int, DnDCharacter> EditorCore::MappedCharacters = {};
 std::map<int, CharacterRace> EditorCore::MappedRaces     = {};

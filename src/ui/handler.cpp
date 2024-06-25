@@ -2,14 +2,15 @@
 #include "imgui_internal.h"
 
 #include <vector>
-
-#include "../inc/dataformat.h"
-#include "../inc/ui.h"
-
-#include <iostream>
 #include <queue>
 
-#include "../inc/editor_core.h"
+#include "../../inc/ui/shared.h"
+#include "../../inc/ui/settings.h"
+#include "../../inc/ui/styling.h"
+#include "../../inc/ui/handler.h"
+#include "../../inc/dataformat.h"
+#include "../../inc/ui/widgets.h"
+#include "../../inc/editor_core.h"
 
 
 #define PDDEBUG
@@ -55,13 +56,32 @@ void UIHandler::DeinitUI()
    CurrentSelectedElementPerTemplate_BackMapping().clear();
 }
 
+
+void UIHandler::ApplyStyling(
+   ImVec2 FramePadding= {20,20},
+   ImVec2 ItemSpacing = {10,0},
+   float TabBorderSize = 50.f,
+   std::function<void(void)> Scoped = [](){})
+{
+   ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, FramePadding);
+   ImGui::PushStyleVar(ImGuiStyleVar_TabBorderSize, TabBorderSize);
+   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ItemSpacing);
+
+
+   Scoped();
+   
+
+   ImGui::PopStyleVar();
+   ImGui::PopStyleVar();
+   ImGui::PopStyleVar();
+}
+
 std::string UIHandler::GetCharacterEditorStateLabel(bool& State)
 {
    static std::string IsOpened = "Close Character Editor";
    static std::string IsClosed = "Open Character Editor";
 
-   static GridElement Dummy;
-   static ButtonPayload Payload{Dummy, nullptr, false};
+   static ButtonPayload Payload{DummyElement, nullptr, false};
 
    State = UIHandler::GetIsCharacterEditorOpen(Payload);
    return State ? IsOpened : IsClosed;
@@ -72,8 +92,7 @@ std::string UIHandler::GetClassEditorStateLabel(bool& State)
    static std::string IsOpened = "Close Class Editor";
    static std::string IsClosed = "Open Class Editor";
 
-   static GridElement Dummy;
-   static ButtonPayload Payload{Dummy, nullptr, false};
+   static ButtonPayload Payload{DummyElement, nullptr, false};
 
    State = UIHandler::GetIsClassEditorOpen(Payload);
    return State ? IsOpened : IsClosed;
@@ -84,8 +103,7 @@ std::string UIHandler::GetRaceEditorStateLabel(bool& State)
    static std::string IsOpened = "Close Race Editor";
    static std::string IsClosed = "Open Race Editor";
 
-   static GridElement Dummy;
-   static ButtonPayload Payload{Dummy, nullptr, false};
+   static ButtonPayload Payload{DummyElement, nullptr, false};
 
    State = UIHandler::GetIsRaceEditorOpen(Payload);
    return State ? IsOpened : IsClosed;
@@ -96,8 +114,7 @@ std::string UIHandler::GetCharacterSelectorStateLabel(bool& State)
    static std::string IsOpened = "Close Character Selector";
    static std::string IsClosed = "Open Character Selector";
 
-   static GridElement Dummy;
-   static ButtonPayload Payload{Dummy, nullptr, false};
+   static ButtonPayload Payload{DummyElement, nullptr, false};
 
    State = UIHandler::GetIsCharacterSelectorOpen(Payload);
    return State ? IsOpened : IsClosed;
@@ -109,6 +126,12 @@ void UIHandler::DrawAppMainMenuBar()
    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20, 20));
    ImGui::PushStyleVar(ImGuiStyleVar_TabBorderSize, 50.f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10, 10));
+
+   // TODO
+   // UIHandler::ApplyStyling(
+   //    
+   //    );
+   
 
    bool State;
    if (ImGui::BeginMainMenuBar())
@@ -133,14 +156,6 @@ void UIHandler::DrawAppMainMenuBar()
          ButtonPayload Payload{DummyElement, nullptr, State == false};
          UIHandler::SetRaceEditorOpen(Payload);
       }
-
-      // Baked into the character editor now
-      // const std::string CharacterSelectorLabel = UIHandler::GetCharacterSelectorStateLabel(State);
-      // if (ImGui::Button(CharacterSelectorLabel.c_str()))
-      // {
-      //    ButtonPayload Payload{DummyElement, nullptr, State == false};
-      //    UIHandler::SetCharacterSelectorOpen(Payload);
-      // }
 
       ImGui::EndMainMenuBar();
    }
@@ -214,7 +229,7 @@ void UIHandler::PaintRaceEditor(ImGuiInputTextFlags SharedInputTextFlags)
    //
    // Class selector tree
    static const std::string ClassListPrefix = "cl::";
-#define RaceEditor_ClassSelectors CharacterClass, ClassTreeIt, UIHandler::Callbacks::Race::SelectAllowedClass
+#define RaceEditor_ClassSelectors CharacterClass, ClassTreeIt, UI::Callbacks::Race::SelectAllowedClass
    MakeTree("{Allowed Classes Selector}",
       {
          // Prepass
@@ -265,7 +280,7 @@ void UIHandler::PaintCharacterEditor(ImGuiInputTextFlags SharedInputTextFlags)
    //
    // Race selector tree 
    static const std::string RaceListPrefix = "rs::";
-#define CharEditor_RaceTypes CharacterRace, RaceTreeIt, UIHandler::Callbacks::Character::SelectRace
+#define CharEditor_RaceTypes CharacterRace, RaceTreeIt, UI::Callbacks::Character::SelectRace
    MakeTree("{Race Selector} : @todo Selected and/or Rolled Race",
       {
          std::deque<const GridElement*> RemovalDeque; // for Prepass @todo unneeded, remove
@@ -292,7 +307,7 @@ void UIHandler::PaintCharacterEditor(ImGuiInputTextFlags SharedInputTextFlags)
       
       // Class selector tree / Filter based on selected race
       static const std::string ClassListPrefix = "cl::";
-   #define CharEditor_ClassTypes CharacterClass, ClassTreeIt, UIHandler::Callbacks::Character::SelectClass
+   #define CharEditor_ClassTypes CharacterClass, ClassTreeIt, UI::Callbacks::Character::SelectClass
       MakeTree("{Class Selector}",
          {
             std::deque<const GridElement*> RemovalDeque; // for Prepass @todo unneeded: Remove the Removal deque (You are your worst enemy :O)
@@ -362,7 +377,7 @@ void UIHandler::PaintCharacterSelector()
    // Character selector tree 
    
    static const std::string CharacterListPrefix = "cx::";
-#define CharEditor_CharTypes DnDCharacter, CharTreeIt, UIHandler::Callbacks::CharacterPicker::SelectCharacter
+#define CharEditor_CharTypes DnDCharacter, CharTreeIt, UI::Callbacks::CharacterPicker::SelectCharacter
    MakeTree("{Character Selector}",
       {
          ImGui::BeginListBox("");
@@ -475,7 +490,7 @@ void UIHandler::SaveCharacter(ButtonPayload& Payload)
 void UIHandler::LoadCharacter(ButtonPayload& Payload)
 {
    DnDCharacter* TrueTarget = static_cast<DnDCharacter*>(Payload.Target);
-   const DnDCharacter& StowedPicker = Callbacks::CharacterPicker::StowedCharacterForPicker();
+   const DnDCharacter& StowedPicker = UI::Callbacks::CharacterPicker::StowedCharacterForPicker();
    if (StowedPicker.ID == INVALID_INDEX)
    {
       return;
@@ -488,7 +503,7 @@ void UIHandler::LoadCharacter(ButtonPayload& Payload)
 //
 // Grid element viewer
 template <class TType = CharacterClass, class IteratorType = ClassTreeIt,
-          CallbackSpace TCallbackSpace = &UIHandler::Callbacks::Race::SelectAllowedClass>
+          CallbackSpace TCallbackSpace = &UI::Callbacks::Race::SelectAllowedClass>
 void UIHandler::UpdateGridElements(
    Template* Group,
    std::map<int, TType>& MappedGroup,
@@ -524,7 +539,7 @@ void UIHandler::UpdateGridElements(
 }
 
 
-template <class TType = CharacterClass, CallbackSpace TCallbackSpace = &UIHandler::Callbacks::Race::SelectAllowedClass>
+template <class TType = CharacterClass, CallbackSpace TCallbackSpace = &UI::Callbacks::Race::SelectAllowedClass>
 void UIHandler::RequestNewTemplateEntryForDataWithID(Template* TGroup, std::string FourCharacterPrefix, const TType& ClassData, int Override)
 {
    const std::string NameAsString = FourCharacterPrefix + ClassData.Name;
@@ -783,202 +798,6 @@ void UIHandler::ProcessGridElement(Template* Category, GridElement& Element)
    Element.CallbackTarget(Payload); //Flip state
 }
 
-
-//
-// Behaviours (via delegate)
-// Selection callback behaviour base
-bool UIHandler::Callbacks::SelectInclusive(ButtonPayload& Payload)
-{
-   return Payload.CallingVisualElement->IsSelected = Payload.CallingVisualElement->IsSelected == false;
-}
-
-void UIHandler::Callbacks::SelectExclusive(ButtonPayload& Payload)
-{
-   // Only allow one selected at a time
-   Payload.CallingVisualElement->IsSelected = true;
-
-   TemplateElementValueIt CurrentSelectionTemplateKeyIt = UIHandler::CurrentSelectedElementPerTemplate_BackMapping().find(
-      Payload.CallingVisualElement);
-   const bool FoundCurrentTemplate = CurrentSelectionTemplateKeyIt != UIHandler::CurrentSelectedElementPerTemplate_BackMapping().end() &&
-      CurrentSelectionTemplateKeyIt->second != nullptr;
-   if (FoundCurrentTemplate == false) { return; }
-
-   TemplateElementKeyIt LastSelectionTemplateKeyIt = LastSelectedElementPerTemplate().find(CurrentSelectionTemplateKeyIt->second);
-   const bool FoundLastTemplate = LastSelectionTemplateKeyIt != UIHandler::LastSelectedElementPerTemplate().end() &&
-      LastSelectionTemplateKeyIt->second != nullptr;
-   if (FoundLastTemplate == false) { return; }
-
-   LastSelectionTemplateKeyIt->second->IsSelected = false;
-}
-
-//
-// Selection callback behaviours -- Class Editor
-void UIHandler::Callbacks::Class::SelectPrimeStat(ButtonPayload& Payload)
-{
-   SelectExclusive(Payload);
-
-   if (Payload.CallingVisualElement->IsSelected)
-   {
-      UIHandler::EditableClass.PrimeStat = static_cast<Spec::Character::StatType>(Payload.CallingVisualElement->EnumSelectorValue);
-   }
-   else
-   {
-      UIHandler::EditableClass.PrimeStat = Spec::Character::StatType::Charisma;
-   }
-}
-
-void UIHandler::Callbacks::Class::SelectHitDie(ButtonPayload& Payload)
-{
-   SelectExclusive(Payload);
-
-   if (Payload.CallingVisualElement->IsSelected)
-   {
-      UIHandler::EditableClass.HitDieShape = static_cast<Platonic::Dice>(Payload.CallingVisualElement->EnumSelectorValue);
-   }
-   else
-   {
-      UIHandler::EditableClass.HitDieShape = Platonic::Dice::E6D;
-   }
-}
-
-//
-// Selection callback behaviours -- Race Editor
-void UIHandler::Callbacks::Race::SelectMinimumStat(ButtonPayload& Payload)
-{
-   SelectInclusive(Payload);
-
-   if (Payload.CallingVisualElement->IsSelected)
-   {
-      const Spec::Character::StatType StatType = static_cast<Spec::Character::StatType>(Payload.CallingVisualElement->EnumSelectorValue);
-      UIHandler::EditableRace.MinimumStats[StatType] = Payload.CallingVisualElement->CurrentValue;
-   }
-   else
-   {
-      const Spec::Character::StatType StatType = static_cast<Spec::Character::StatType>(Payload.CallingVisualElement->EnumSelectorValue);
-      UIHandler::EditableRace.MinimumStats[StatType] = 0;
-   }
-}
-
-
-void UIHandler::Callbacks::Race::SelectModifier(ButtonPayload& Payload)
-{
-   SelectInclusive(Payload);
-
-   if (Payload.CallingVisualElement->IsSelected)
-   {
-      Spec::Character::StatType StatType = static_cast<Spec::Character::StatType>(Payload.CallingVisualElement->EnumSelectorValue);
-      UIHandler::EditableRace.Modifiers[StatType] = Payload.CallingVisualElement->CurrentValue;
-   }
-   else
-   {
-      Spec::Character::StatType StatType = static_cast<Spec::Character::StatType>(Payload.CallingVisualElement->EnumSelectorValue);
-      UIHandler::EditableRace.Modifiers[StatType] = 0;
-   }
-}
-
-void UIHandler::Callbacks::Race::SelectAllowedClass(ButtonPayload& Payload)
-{
-   SelectInclusive(Payload);
-
-
-   int SelectorValue = Payload.CallingVisualElement->EnumSelectorValue;
-   if (SelectorValue == INVALID_INDEX) { return; }
-
-   if (Payload.CallingVisualElement->IsSelected)
-   {
-      UIHandler::EditableRace.AllowedClassIDs[SelectorValue] = Payload.CallingVisualElement->CurrentValue;
-   }
-   else
-   {
-      UIHandler::EditableRace.AllowedClassIDs[SelectorValue] = 0;
-   }
-}
-
-void UIHandler::Callbacks::Character::SelectRace(ButtonPayload& Payload)
-{
-   SelectExclusive(Payload);
-
-   if (Payload.CallingVisualElement->IsSelected)
-   {
-      const int RaceID = Payload.CallingVisualElement->CurrentValue;
-      UIHandler::EditableCharacter.Race.ID = RaceID;
-
-      RaceTreeIt It = EditorCore::MappedRaces.find(RaceID);
-      if (It == EditorCore::MappedRaces.end()) { return; }
-
-      CharacterRace& Race = It->second;
-      UIHandler::EditableCharacter.Race = Race;
-   }
-   else
-   {
-      UIHandler::EditableCharacter.Race = CharacterRace{};
-   }
-}
-
-void UIHandler::Callbacks::Character::SelectClass(ButtonPayload& Payload)
-{
-   SelectExclusive(Payload);
-
-   if (Payload.CallingVisualElement->IsSelected)
-   {
-      const int ClassID = Payload.CallingVisualElement->CurrentValue;
-      UIHandler::EditableCharacter.Class.ID = ClassID;
-   }
-   else
-   {
-      UIHandler::EditableCharacter.Class = CharacterClass{};
-   }
-}
-
-//
-// Selection callback behaviours -- Character Editor
-void UIHandler::Callbacks::Character::SelectAlignment(ButtonPayload& Payload)
-{
-   SelectExclusive(Payload);
-
-   if (Payload.CallingVisualElement->IsSelected)
-   {
-      UIHandler::EditableCharacter.Alignment = static_cast<Spec::Character::Alignment>(Payload.CallingVisualElement->EnumSelectorValue);
-   }
-   else // nothing is selected / was deselected
-   {
-      UIHandler::EditableCharacter.Alignment = Spec::Character::NeutralNeutral;
-   }
-}
-
-void UIHandler::Callbacks::Character::UpdateStatsEntry(ButtonPayload& ButtonPayload)
-{
-   GridElement* Widget = ButtonPayload.CallingVisualElement;
-   const Spec::Character::StatType StatSelector =  static_cast<Spec::Character::StatType>(Widget->EnumSelectorValue);
-
-   Widget->CurrentValue = UIHandler::EditableCharacter.AbilityScores[StatSelector].ModifiedValue;
-}
-
-void UIHandler::Callbacks::Character::SelectStat(ButtonPayload& ButtonPayload)
-{
-   SelectExclusive(ButtonPayload);
-
-}
-
-//
-// Character picker
-void UIHandler::Callbacks::CharacterPicker::SelectCharacter(ButtonPayload& Payload)
-{
-   SelectExclusive(Payload);
-
-   if (Payload.CallingVisualElement->IsSelected)
-   {
-      const int CharacterID = Payload.CallingVisualElement->CurrentValue;
-      CharTreeIt It = EditorCore::MappedCharacters.find(CharacterID);
-      if (It == EditorCore::MappedCharacters.end()) { return; }
-
-      StowedCharacterForPicker(&It->second);
-   }
-   else
-   {
-      StowedCharacterForPicker(&UIHandler::EditableCharacter);
-   }
-}
 
 //
 // Utility

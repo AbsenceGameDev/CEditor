@@ -7,7 +7,7 @@
 
 #include "../inc/dataformat.h"
 #include "../inc/editor_core.h"
-#include "../inc/ui.h"
+#include "../inc/ui/handler.h"
 
 // Data
 static ID3D11Device* g_pd3dDevice = nullptr;
