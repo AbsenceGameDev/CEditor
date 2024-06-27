@@ -1,7 +1,7 @@
 {    
     "Name" : "Glorp the Hugims",    
     "ID" : 0,    
-    "RaceID" : -1,    
+    "RaceID" : 2,    
     "ClassID" : 2,    
     "AbilityScores" : [ 
         {"RollValue" : 6, "ModifiedValue" : 6},

@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "shared.h"
+#include "styling.h"
 #include "../editor_core.h"
 #include "../../inc/dataformat.h"
 
@@ -68,11 +69,17 @@ typedef struct LinkedWidgetBase
 
    static void Paint(LinkedWidgetBase* OptionalBase = nullptr)
    {
+      //WidgetStyling.WrapStyle([](){});
+      
       static LinkedWidgetBase* WidgetBase = OptionalBase;
       WidgetBase = OptionalBase != nullptr ? OptionalBase : WidgetBase;
 
       if (WidgetBase == nullptr) { return;}
-      (*WidgetBase)();
+      WidgetBase->WidgetStyling.WrapStyle(
+         [InWidgetBase = WidgetBase]()
+         {
+            (*InWidgetBase)();
+         });
    }
    
    virtual void operator()(...) {};
@@ -88,6 +95,7 @@ using LinkedWidgetBase::LinkedWidgetBase;
 void operator()(...) final {};
    
 public:
+   CE::Style::Compound WidgetStyling;
 
    bool IsVisible = true;
    bool AltState = true;
@@ -102,35 +110,44 @@ typedef struct LinkedButton final : public LinkedWidgetBase
    
    virtual void operator()(const char* Label, const ImVec2& Size, ...) final
    {
-      if (IsVisible == false) { return; } 
-
-      if (ImGui::Button(Label, Size))
-      {
-         AltState = AltState == false; // flip
-         PropagateState();
-      }
+      WidgetStyling.WrapStyle(
+         [&]()
+         {
+            if (IsVisible == false) { return; } 
+      
+            if (ImGui::Button(Label, Size))
+            {
+               AltState = AltState == false; // flip
+               PropagateState();
+            }
+         });      
    }
 
    virtual void OnStateUpdate(bool OldState) {}
    
 } linked_button_t;
 
-struct LinkedText final : public LinkedWidgetBase
+struct WText final : public LinkedWidgetBase
 {
    SCOPED_USE_LINKEDWIDGET_NAMESPACE
    SCOPED_USE_MAKE_WIDGET_NOT_ABSTRACT
    
    virtual void operator()(const char* fmt, ...) final
    {
-      if (IsVisible == false) { return; }
-      
       int result;
       va_list list{};
       va_start(list, fmt);
-      ImGui::TextV(fmt, list);
-      printf("\n");
+      WidgetStyling.WrapStyle(
+         [&]()
+         {
+            if (IsVisible == false) { return; }
+            
+            ImGui::TextV(fmt, list);
+         });        
       va_end(list);
    }
+   static void Draw(CE::Style::Compound& StaticWidgetStyling, const char* fmt, ...);
+   
    virtual void OnStateUpdate(bool OldState) {}
 };
 
@@ -210,6 +227,11 @@ typedef struct Template
       Inner.erase(Consider);
    }
    
+   void Draw();
+   void Step(const GridElement& StepElement, int& StepIdx, const ImVec2& CursorScreenPos, const ImVec2& Origin, ImVec2& CalcPos);
+   void ProcessGridElement(GridElement& Element);
+   void RemoveGridElement(const GridElement* Consider);
+
    std::set<GridElement> Inner;
 
    ImVec2 MaxSize {-1, -1}; // {x,y} Negative one indicates there is no limit 
@@ -224,7 +246,7 @@ namespace UI
    static constexpr ElementStyle DefaultStyle = {DefaultSizes, DefaultPadding, ImTextureID{}};
 
    static const std::string ClassStatLabels[6] = { "ps::STR", "ps::INT", "ps::WIS", "ps::DEX", "ps::CON", "ps::CHA" };
-   static const std::string ClassDieLabels[6] = { "ps::1d4", "ps::1d6", "ps::1d8", "ps::1d12", "ps::20" };
+   static const std::string ClassDieLabels[5] = { "ps::1d4", "ps::1d6", "ps::1d8", "ps::1d12", "ps::20" };
    struct Class
    {
 
@@ -242,7 +264,6 @@ namespace UI
       // Potentially selectable classes, gets modified each step, 
       static Template ClassTemplates;
       
-
       static std::set<GridElement> MinimumStatsConstructorList();
       static Template MinimumStatsTemplates;
       
@@ -350,6 +371,25 @@ struct LinkedStatCategory : public LinkedWidgetBase
    
    struct Template* InnerTemplate = nullptr;
 };
+
+
+namespace GlobalSharedStylings
+{
+   static CE::Style::Compound GenericTextCompound
+   {
+      CE::Style::SPadding{UNIFORM_ARGS_ANY(2, -1), PDVec2{20,20}, UNIFORM_ARGS_ANY(1, -1)},
+      CE::Style::SRounding{UNIFORM_ARGS_ANY(3, -1) , UNIFORM_ARGS_ANY(1, 20.0f), UNIFORM_ARGS_ANY(3, -1)},
+      CE::Style::SIndentation{UNIFORM_ARGS_ANY(1, -1)},
+      CE::Style::SSpacing{UNIFORM_ARGS_ANY(1, -1), PDVec2{10, 10}},
+      CE::Style::SSizing1D{50.f, UNIFORM_ARGS_ANY(8, -1)},
+      CE::Style::SSizing2D{},
+      CE::Style::SAngling{UNIFORM_ARGS_ANY(1, -1)},
+      CE::Style::SAlignment{UNIFORM_ARGS_ANY(5, -1)},
+      CE::Style::SAlpha{UNIFORM_ARGS_ANY(2, -1)} 
+   };
+   
+}
+
 
 
 #endif // WIDGETSUI_H

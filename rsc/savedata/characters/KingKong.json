@@ -1,7 +1,7 @@
 {    
   "Name" : "KingKong",    
   "ID" : 2,    
-  "RaceID" : -1,    
+  "RaceID" : 3,    
   "ClassID" : 2,    
   "AbilityScores" : 
     [ {"RollValue" : 6, "ModifiedValue" : 6}

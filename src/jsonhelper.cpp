@@ -1,10 +1,11 @@
-
 #include <fstream>
+#include <string>
+
+#include "imgui.h"
 #include "json.h"
+
 #include "../inc/ruleset.h"
 #include "../inc/jsonhelper.h"
-
-#include <string>
 
 namespace JHelper
 {
@@ -89,12 +90,7 @@ namespace JHelper
       {
          strcpy_s(Destination, json_value_as_string(NameEntry->value)->string);         
       }
-
-      template<typename TEnumType = Spec::Character::StatType>
-      void DeserializeEnum(TEnumType& TargetEnum, struct json_object_element_s* EnumEntry)
-      {
-         TargetEnum = static_cast<TEnumType>(std::atoi(json_value_as_number(EnumEntry->value)->number));      
-      }
+      
       void DeserializeInteger(int& TargetValue, struct json_object_element_s* NumberEntry)
       {
          TargetValue = std::atoi(json_value_as_number(NumberEntry->value)->number);      
@@ -103,75 +99,7 @@ namespace JHelper
    
    namespace PoorMansSerializer
    {
-      std::string StartSerialize() { return R"({)"; }
-      std::string EndSerialize() { return R"(})"; }
-
-      template<bool IsFirstEntry = false, bool IsWithoutStartingBlock = true>
-      std::string SerializeGenericName(const char* NameLabel, const GenericName& Name)
-      {
-         return
-            IsFirstEntry
-            ? IsWithoutStartingBlock == false
-               ? std::string(  R"({")" + std::string(NameLabel) + R"(" : ")" + std::string(Name)  + R"(")" )  
-               : std::string(  R"(    ")" + std::string(NameLabel) + R"(" : ")" + std::string(Name)  + R"(")" )
-            : std::string(     R"(,    ")" + std::string(NameLabel) + R"(" : ")" + std::string(Name)  + R"(")" );
-      }
-
-      template<bool IsFirstEntry = false, bool IsWithoutStartingBlock = true>
-      std::string SerializeGenericNumber(const char* NumberLabel, int Value)
-      {
-         return
-            IsFirstEntry
-            ? IsWithoutStartingBlock == false
-               ? std::string(  R"({")" + std::string(NumberLabel) + R"(" : )" + std::to_string(Value))  
-               : std::string(  R"(    ")" + std::string(NumberLabel) + R"(" : )" + std::to_string(Value))
-            : std::string(     R"(,    ")" + std::string(NumberLabel) + R"(" : )" + std::to_string(Value));      
-      }
-
-
-      template<bool IsFirstEntry = false, bool IsWithoutStartingBlock = true>
-      std::string SerializeIntArray(const char* ArrayLabel, const int* Values, int ArraySize = 6)
-      {
-         std::string Inner{"[ "};
-         for (int Step = 0; Step < ArraySize; )
-         {
-            int NextStep = Step + 1;
-            Inner += std::to_string(Values[Step]) + (NextStep >= ArraySize ? std::string{} : std::string{","});
-            ++Step;
-         }
-         Inner += std::string{"]"};
-         
-         return
-            IsFirstEntry
-            ? IsWithoutStartingBlock == false
-               ? std::string(  R"({")" + std::string(ArrayLabel) + R"(" : )"     + Inner)  
-               : std::string(  R"(    ")" + std::string(ArrayLabel) + R"(" : )"  + Inner)
-            : std::string(     R"(,    ")" + std::string(ArrayLabel) + R"(" : )" + Inner);      
-      }
-
-
-      template<bool IsFirstEntry = false, bool IsWithoutStartingBlock = true>
-      std::string SerializeAbilityScores(const char* ArrayLabel, const StatRollReturn* Values, int ArraySize = 6)
-      {
-         std::string Inner{"[ "};
-         for (int Step = 0; Step < ArraySize; )
-         {
-            const StatRollReturn& CurrentRollStep = Values[Step++];
-            Inner += "{";
-            Inner += R"("RollValue" : )" + std::to_string(CurrentRollStep.RollValue);
-            Inner += R"(, "ModifiedValue" : )" + std::to_string(CurrentRollStep.ModifiedValue);
-            Inner += "}";
-            Inner += (Step >= ArraySize ? std::string{} : std::string{","});
-         }
-         Inner += std::string{"]"};
-         
-         return
-            IsFirstEntry
-            ? IsWithoutStartingBlock == false
-               ? std::string(  R"({")" + std::string(ArrayLabel) + R"(" : )"     + Inner)  
-               : std::string(  R"(    ")" + std::string(ArrayLabel) + R"(" : )"  + Inner)
-            : std::string(     R"(,    ")" + std::string(ArrayLabel) + R"(" : )" + Inner);      
-      }           
+      
       
    }
 }

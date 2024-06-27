@@ -3,12 +3,11 @@
 #define HANDLERUI_H
 
 #include "imgui.h"
-#include <deque>
-#include <functional>
 #include <map>
 #include "shared.h"
 #include "../editor_core.h"
 #include "../../inc/ruleset.h"
+#include "../../inc/ui/styling.h"
 
 // fwd decl.
 struct Template;
@@ -17,15 +16,12 @@ class UIHandler
 {
 public:
    static void DeinitUI();
-
-   static void ApplyStyling(ImVec2 FramePadding, ImVec2 ItemSpacing, float TabBorderSize, std::function<void()> Scoped);
-
+   
    static std::string GetCharacterEditorStateLabel(bool& State);
    static std::string GetClassEditorStateLabel(bool& State);
    static std::string GetRaceEditorStateLabel(bool& State);
    static std::string GetCharacterSelectorStateLabel(bool& State);
    static void DrawAppMainMenuBar();
-   static void ProcessGridElement(Template* Category, GridElement& Element);
    static void DrawTemplates(Template* Category);
    static void PaintClassEditor(ImGuiInputTextFlags SharedInputTextFlags);
    static void PaintRaceEditor(ImGuiInputTextFlags SharedInputTextFlags);
@@ -48,20 +44,6 @@ public:
    static void SaveRace(ButtonPayload& ButtonPayload);
    static void SaveCharacter(ButtonPayload& ButtonPayload);
    static void LoadCharacter(ButtonPayload& ButtonPayload);
-
-   template<class TType = CharacterClass, CallbackSpace TCallbackSpace = Callbacks::Race::SelectAllowedClass>
-   static void RequestNewTemplateEntryForDataWithID(Template* TGroup, std::string FourCharacterPrefix, const TType& ClassData, int Override = INVALID_INDEX); // @todo rethinking all of this, come back to it tomorrow
-   static void RemoveGridElement(const GridElement* Consider, Template* TGroup);
-
-   template<class TType = CharacterClass, class IteratorType, 
-      CallbackSpace TCallbackSpace = Callbacks::Race::SelectAllowedClass>
-   static void UpdateGridElements(
-      Template* Group,
-      std::map<int, TType>& MappedGroup,
-      std::string FourCharacterPrefix,
-      std::deque<const GridElement*> RemovalDeque,
-      bool ShouldFilter = false,
-      int AllowedClassIDs[MAX_ALLOWED_CLASSES] = Dummy);
    
    static void SetClassEditorOpen(ButtonPayload& Payload)         { DrawClassEditor       = Payload.SetOpen; }
    static void SetRaceEditorOpen(ButtonPayload& Payload)          { DrawRaceEditor        = Payload.SetOpen; }
@@ -115,7 +97,10 @@ public:
    static CharacterClass EditableClass;
    static CharacterRace  EditableRace;
    static DnDCharacter   EditableCharacter;
-   
+
+
+   //@todo possibly just configure via json, having already sey up serialization for the stylings
+   static CE::Style::Compound Stylings[CE::Style::StylingSelector::End];
 };
 
 #endif // HANDLERUI_H
